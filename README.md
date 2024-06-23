@@ -1,6 +1,7 @@
-## Foundry
+## Foundry Project: Lottery with Chainlink VRF Oracle Integration and Automation
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+## About
+This code base features a probably random lottery contract that uses Chainlink VRF to generate a random number. 
 
 Foundry consists of:
 
