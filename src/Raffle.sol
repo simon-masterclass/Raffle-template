@@ -23,8 +23,8 @@ contract Raffle {
         }
     }
 
-    function pickWinner() public {
-
+    function pickWinner() external {
+        // Only-owner function to pick a winner
     }
 
     /* Getter Functions */
