@@ -12,8 +12,14 @@ contract Raffle {
     /* Error Codes */
     error Raffle__SendMoreToEnterRaffle();
 
+    /* State Variables */
     uint256 private immutable i_entranceFee;
+    address payable[] private s_players;
 
+    /* Events */
+    event RaffleEntered(address indexed player);
+
+    /* Constructor */
     constructor(uint256 entranceFee) {
         i_entranceFee = entranceFee;
     }   
@@ -23,10 +29,18 @@ contract Raffle {
         if (msg.value < i_entranceFee) {
             revert Raffle__SendMoreToEnterRaffle();
         }
+
+        s_players.push(payable(msg.sender));
+        emit RaffleEntered(msg.sender); 
     }
 
     function pickWinner() external {
-        // Only-owner function to pick a winner
+        // 1. Get random number from Chainlink VRF
+        // 2. Pick winner based on random number (automatically done by Chainlink VRF)
+        // 3. Transfer winnings to winner and reset raffle
+        block.timestamp -
+
+
     }
 
     /* Getter Functions */
