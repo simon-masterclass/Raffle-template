@@ -29,12 +29,14 @@ contract Raffle is VRFConsumerBaseV2 {
     VRFCoordinatorV2Interface COORDINATOR;
     LinkTokenInterface LINKTOKEN;
 
-    address vrfCoordinator = 0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625;
-    address link_token_contract = 0x779877A7B0D9E8603169DdbD7836e478b4624789;
-    bytes32 keyHash = 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c;
-    uint32 callbackGasLimit = 100000;
-    uint16 requestConfirmations = 3;
-    uint32 numWords = 2;
+    // Chainlink VRF parameters - Avalanche Fuji Testnet
+    address immutable i_vrfCoordinator = 0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE;
+    address immutable i_link_token_contract = 0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846;
+    bytes32 immutable i_keyHash = 0xc799bd1e3bd4d1a41cd4968997a4e03dfd2a3c7c04b695881138580163f42887;
+    // A reasonable default is 100000, but this value could be different on other networks.
+    uint32 immutable i_callbackGasLimit = 100000;
+    uint16 immutable i_requestConfirmations = 3;
+    uint32 immutable i_numWords = 1;
 
     // Storage parameters
     uint256[] public s_randomWords;
@@ -46,10 +48,10 @@ contract Raffle is VRFConsumerBaseV2 {
     event RaffleEntered(address indexed player);
 
     /* Constructor */
-    constructor(uint256 entranceFee) VRFConsumerBaseV2(vrfCoordinator)  {
+    constructor(uint256 entranceFee) VRFConsumerBaseV2(i_vrfCoordinator)  {
         i_entranceFee = entranceFee;
-        COORDINATOR = VRFCoordinatorV2Interface(vrfCoordinator);
-        LINKTOKEN = LinkTokenInterface(link_token_contract);
+        COORDINATOR = VRFCoordinatorV2Interface(i_vrfCoordinator);
+        LINKTOKEN = LinkTokenInterface(i_link_token_contract);
     }   
 
     function enterRaffle() external payable {
@@ -83,11 +85,11 @@ contract Raffle is VRFConsumerBaseV2 {
     function requestRandomWords() external {
         // Will revert if subscription is not set and funded.
         s_requestId = COORDINATOR.requestRandomWords(
-            keyHash,
+            i_keyHash,
             s_subscriptionId,
-            requestConfirmations,
-            callbackGasLimit,
-            numWords
+            i_requestConfirmations,
+            i_callbackGasLimit,
+            i_numWords
         );
     }
 
