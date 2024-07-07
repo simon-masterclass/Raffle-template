@@ -16,12 +16,12 @@ contract RaffleGas {
 
     constructor(uint256 entranceFee) {
         i_entranceFee = entranceFee;
-    }   
+    }
 
     /* Revert Gas Function Analysis */
     function revertWithError() public view {
-        if (i_entranceFee < 69){
-        revert Raffle__InsufficientFunds();
+        if (i_entranceFee < 69) {
+            revert Raffle__InsufficientFunds();
         }
     }
 

@@ -7,19 +7,19 @@ pragma solidity ^0.8.20;
  * @notice This contract is a work in progress and is not yet ready for deployment.
  * @dev Implements Chainlink VRFv2 for random number generation
  */
-
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
-import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
+import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
-contract Raffle is VRFConsumerBaseV2 {
+contract Raffle is VRFConsumerBaseV2Plus {
     /* Error Codes */
     error Raffle__SendMoreToEnterRaffle();
     error Raffle__RaffleNotOver();
-    error Raffle__OnlyOwnerCanCallThisFunction();
+    error Raffle__onlyRaffleOwnerCanCallThisFunction();
 
     /* Constants */
-    uint256 private constant i_interval = 1 weeks;
+    uint256 private immutable i_interval;
 
     /* State Variables */
     uint256 private immutable i_entranceFee;
@@ -31,42 +31,55 @@ contract Raffle is VRFConsumerBaseV2 {
     LinkTokenInterface LINKTOKEN;
 
     // Chainlink VRF parameters - Avalanche Fuji Testnet
-    address immutable i_vrfCoordinator = 0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE;
-    address immutable i_link_token_contract = 0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846;
-    bytes32 immutable i_keyHash = 0xc799bd1e3bd4d1a41cd4968997a4e03dfd2a3c7c04b695881138580163f42887;
-    // A reasonable default is 100000, but this value could be different on other networks.
-    uint32 immutable i_callbackGasLimit = 100000;
-    uint16 immutable i_requestConfirmations = 3;
-    uint32 immutable i_numWords = 1;
+    // address immutable i_vrfCoordinator = 0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE;
+    // address immutable i_link_token_contract = 0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846;
+    // bytes32 immutable i_keyHash = 0xc799bd1e3bd4d1a41cd4968997a4e03dfd2a3c7c04b695881138580163f42887;
+    // address private immutable i_vrfCoordinator;
+    address private immutable i_link_token_contract;
+    bytes32 private immutable i_keyHash;
+
+    // Misc Chainlink VRF parameters
+    uint16 constant REQUEST_CONFIRMATION = 3;
+    uint32 constant NUM_WORDS = 1;
+    uint32 private immutable i_callbackGasLimit;
 
     // Storage parameters
     uint256[] public s_randomWords;
     uint256 public s_requestId;
     uint64 public s_subscriptionId;
     address private s_owner;
-    
+
     /* Events */
     event RaffleEntered(address indexed player);
 
     /* Modifiers */
-    modifier onlyOwner() {
-        if(msg.sender != s_owner) 
-            revert Raffle__OnlyOwnerCanCallThisFunction();
+    modifier onlyRaffleOwner() {
+        if (msg.sender != s_owner) {
+            revert Raffle__onlyRaffleOwnerCanCallThisFunction();
+        }
         _;
     }
 
     /* Constructor */
-    constructor(uint256 entranceFee_, address owner_) VRFConsumerBaseV2(i_vrfCoordinator)  {
+    constructor(uint256 entranceFee_, uint256 interval_, address owner_, uint32 callbackGasLimit_, address vrfCoordinator_)
+        VRFConsumerBaseV2Plus(vrfCoordinator_)
+    {
         i_entranceFee = entranceFee_;
-        COORDINATOR = VRFCoordinatorV2Interface(i_vrfCoordinator);
+        i_interval = interval_;
+        s_owner = owner_;
+        
+        COORDINATOR = VRFCoordinatorV2Interface(vrfCoordinator_);
         LINKTOKEN = LinkTokenInterface(i_link_token_contract);
 
-        s_owner = owner_;
+        s_lastRaffleTimestamp = block.timestamp;
+        i_callbackGasLimit = callbackGasLimit_;
+
         // Create a new subscription when you deploy the contract.
         createNewSubscription();
-    }   
+    }
     // Create a new subscription when the contract is initially deployed.
-    function createNewSubscription() private onlyOwner {
+
+    function createNewSubscription() private onlyRaffleOwner {
         s_subscriptionId = COORDINATOR.createSubscription();
         // Add this contract as a consumer of its own subscription.
         COORDINATOR.addConsumer(s_subscriptionId, address(this));
@@ -80,10 +93,10 @@ contract Raffle is VRFConsumerBaseV2 {
         }
 
         s_players.push(payable(msg.sender));
-        emit RaffleEntered(msg.sender); 
+        emit RaffleEntered(msg.sender);
     }
 
-    function pickWinner() external onlyOwner {
+    function pickWinner() external onlyRaffleOwner {
         // 1. Get random number from Chainlink VRF
         // 2. Pick winner based on random number (automatically done by Chainlink VRF)
         // 3. Transfer winnings to winner and reset raffle
@@ -91,29 +104,37 @@ contract Raffle is VRFConsumerBaseV2 {
             revert Raffle__RaffleNotOver();
         }
 
+        // Request random number from Chainlink VRF
+        VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient.RandomWordsRequest({
+            keyHash: i_keyHash,
+            subId: s_subscriptionId,
+            requestConfirmations: REQUEST_CONFIRMATION,
+            callbackGasLimit: i_callbackGasLimit,
+            numWords: NUM_WORDS,
+            extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1(false))
+        });
     }
 
     // Chainlink maintenance fuction: Assumes this contract owns link.
     // 1000000000000000000 = 1 LINK
-    function topUpSubscription(uint256 amount) external onlyOwner {
-        LINKTOKEN.transferAndCall(
-            address(COORDINATOR),
-            amount,
-            abi.encode(s_subscriptionId)
-        );
+    function topUpSubscription(uint256 amount) external onlyRaffleOwner {
+        LINKTOKEN.transferAndCall(address(COORDINATOR), amount, abi.encode(s_subscriptionId));
     }
     // Chainlink automation subscription maintenance fuction
-    function addConsumer(address consumerAddress) external onlyOwner {
+
+    function addConsumer(address consumerAddress) external onlyRaffleOwner {
         // Add a consumer contract to the subscription.
         COORDINATOR.addConsumer(s_subscriptionId, consumerAddress);
     }
     // Chainlink automation subscription maintenance fuction
-    function removeConsumer(address consumerAddress) external onlyOwner {
+
+    function removeConsumer(address consumerAddress) external onlyRaffleOwner {
         // Remove a consumer contract from the subscription.
         COORDINATOR.removeConsumer(s_subscriptionId, consumerAddress);
     }
     // Chainlink automation subscription maintenance fuction
-    function cancelSubscription(address receivingWallet) external onlyOwner {
+
+    function cancelSubscription(address receivingWallet) external onlyRaffleOwner {
         // Cancel the subscription and send the remaining LINK to a wallet address.
         COORDINATOR.cancelSubscription(s_subscriptionId, receivingWallet);
         s_subscriptionId = 0;
@@ -121,26 +142,20 @@ contract Raffle is VRFConsumerBaseV2 {
 
     // Transfer this contract's funds to an address.
     // 1000000000000000000 = 1 LINK
-    function withdrawLinkTokens(uint256 amount, address to) external onlyOwner {
+    function withdrawLinkTokens(uint256 amount, address to) external onlyRaffleOwner {
         LINKTOKEN.transfer(to, amount);
     }
 
     /* Chainlink Functions */
-    function fulfillRandomWords(
-        uint256 /* requestId */,
-        uint256[] memory randomWords
-    ) internal override {
+    function fulfillRandomWords(uint256, /* requestId */ uint256[] calldata randomWords) internal override {
         s_randomWords = randomWords;
     }
     // Assumes the subscription is funded sufficiently.
+
     function requestRandomWords() external {
         // Will revert if subscription is not set and funded.
         s_requestId = COORDINATOR.requestRandomWords(
-            i_keyHash,
-            s_subscriptionId,
-            i_requestConfirmations,
-            i_callbackGasLimit,
-            i_numWords
+            i_keyHash, s_subscriptionId, REQUEST_CONFIRMATION, i_callbackGasLimit, NUM_WORDS
         );
     }
 

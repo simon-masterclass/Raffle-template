@@ -16,7 +16,6 @@ import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBa
  * THIS IS AN EXAMPLE CONTRACT THAT USES UN-AUDITED CODE.
  * DO NOT USE THIS CODE IN PRODUCTION.
  */
-
 contract VRFv2SubscriptionManager is VRFConsumerBaseV2 {
     VRFCoordinatorV2Interface COORDINATOR;
     LinkTokenInterface LINKTOKEN;
@@ -32,8 +31,7 @@ contract VRFv2SubscriptionManager is VRFConsumerBaseV2 {
     // The gas lane to use, which specifies the maximum gas price to bump to.
     // For a list of available gas lanes on each network,
     // see https://docs.chain.link/docs/vrf-contracts/#configurations
-    bytes32 keyHash =
-        0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c;
+    bytes32 keyHash = 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c;
 
     // A reasonable default is 100000, but this value could be different
     // on other networks.
@@ -63,19 +61,11 @@ contract VRFv2SubscriptionManager is VRFConsumerBaseV2 {
     // Assumes the subscription is funded sufficiently.
     function requestRandomWords() external onlyOwner {
         // Will revert if subscription is not set and funded.
-        s_requestId = COORDINATOR.requestRandomWords(
-            keyHash,
-            s_subscriptionId,
-            requestConfirmations,
-            callbackGasLimit,
-            numWords
-        );
+        s_requestId =
+            COORDINATOR.requestRandomWords(keyHash, s_subscriptionId, requestConfirmations, callbackGasLimit, numWords);
     }
 
-    function fulfillRandomWords(
-        uint256 /* requestId */,
-        uint256[] memory randomWords
-    ) internal override {
+    function fulfillRandomWords(uint256, /* requestId */ uint256[] memory randomWords) internal override {
         s_randomWords = randomWords;
     }
 
@@ -89,11 +79,7 @@ contract VRFv2SubscriptionManager is VRFConsumerBaseV2 {
     // Assumes this contract owns link.
     // 1000000000000000000 = 1 LINK
     function topUpSubscription(uint256 amount) external onlyOwner {
-        LINKTOKEN.transferAndCall(
-            address(COORDINATOR),
-            amount,
-            abi.encode(s_subscriptionId)
-        );
+        LINKTOKEN.transferAndCall(address(COORDINATOR), amount, abi.encode(s_subscriptionId));
     }
 
     function addConsumer(address consumerAddress) external onlyOwner {
