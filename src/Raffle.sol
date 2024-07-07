@@ -16,6 +16,7 @@ contract Raffle is VRFConsumerBaseV2 {
     /* Error Codes */
     error Raffle__SendMoreToEnterRaffle();
     error Raffle__RaffleNotOver();
+    error Raffle__OnlyOwnerCanCallThisFunction();
 
     /* Constants */
     uint256 private constant i_interval = 1 weeks;
@@ -42,18 +43,36 @@ contract Raffle is VRFConsumerBaseV2 {
     uint256[] public s_randomWords;
     uint256 public s_requestId;
     uint64 public s_subscriptionId;
-    address s_owner;
-
+    address private s_owner;
+    
     /* Events */
     event RaffleEntered(address indexed player);
 
+    /* Modifiers */
+    modifier onlyOwner() {
+        if(msg.sender != s_owner) 
+            revert Raffle__OnlyOwnerCanCallThisFunction();
+        _;
+    }
+
     /* Constructor */
-    constructor(uint256 entranceFee) VRFConsumerBaseV2(i_vrfCoordinator)  {
-        i_entranceFee = entranceFee;
+    constructor(uint256 entranceFee_, address owner_) VRFConsumerBaseV2(i_vrfCoordinator)  {
+        i_entranceFee = entranceFee_;
         COORDINATOR = VRFCoordinatorV2Interface(i_vrfCoordinator);
         LINKTOKEN = LinkTokenInterface(i_link_token_contract);
-    }   
 
+        s_owner = owner_;
+        // Create a new subscription when you deploy the contract.
+        createNewSubscription();
+    }   
+    // Create a new subscription when the contract is initially deployed.
+    function createNewSubscription() private onlyOwner {
+        s_subscriptionId = COORDINATOR.createSubscription();
+        // Add this contract as a consumer of its own subscription.
+        COORDINATOR.addConsumer(s_subscriptionId, address(this));
+    }
+
+    /* External Functions */
     function enterRaffle() external payable {
         // require(msg.value >= i_entranceFee, "Raffle: Not enough ETH sent to enter.");
         if (msg.value < i_entranceFee) {
@@ -64,7 +83,7 @@ contract Raffle is VRFConsumerBaseV2 {
         emit RaffleEntered(msg.sender); 
     }
 
-    function pickWinner() external {
+    function pickWinner() external onlyOwner {
         // 1. Get random number from Chainlink VRF
         // 2. Pick winner based on random number (automatically done by Chainlink VRF)
         // 3. Transfer winnings to winner and reset raffle
@@ -72,6 +91,38 @@ contract Raffle is VRFConsumerBaseV2 {
             revert Raffle__RaffleNotOver();
         }
 
+    }
+
+    // Chainlink maintenance fuction: Assumes this contract owns link.
+    // 1000000000000000000 = 1 LINK
+    function topUpSubscription(uint256 amount) external onlyOwner {
+        LINKTOKEN.transferAndCall(
+            address(COORDINATOR),
+            amount,
+            abi.encode(s_subscriptionId)
+        );
+    }
+    // Chainlink automation subscription maintenance fuction
+    function addConsumer(address consumerAddress) external onlyOwner {
+        // Add a consumer contract to the subscription.
+        COORDINATOR.addConsumer(s_subscriptionId, consumerAddress);
+    }
+    // Chainlink automation subscription maintenance fuction
+    function removeConsumer(address consumerAddress) external onlyOwner {
+        // Remove a consumer contract from the subscription.
+        COORDINATOR.removeConsumer(s_subscriptionId, consumerAddress);
+    }
+    // Chainlink automation subscription maintenance fuction
+    function cancelSubscription(address receivingWallet) external onlyOwner {
+        // Cancel the subscription and send the remaining LINK to a wallet address.
+        COORDINATOR.cancelSubscription(s_subscriptionId, receivingWallet);
+        s_subscriptionId = 0;
+    }
+
+    // Transfer this contract's funds to an address.
+    // 1000000000000000000 = 1 LINK
+    function withdrawLinkTokens(uint256 amount, address to) external onlyOwner {
+        LINKTOKEN.transfer(to, amount);
     }
 
     /* Chainlink Functions */
