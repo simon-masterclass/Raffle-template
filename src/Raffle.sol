@@ -8,7 +8,6 @@ pragma solidity ^0.8.20;
  * @dev Implements Chainlink VRFv2 for random number generation
  */
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
-import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
@@ -16,41 +15,45 @@ contract Raffle is VRFConsumerBaseV2Plus {
     /* Error Codes */
     error Raffle__SendMoreToEnterRaffle();
     error Raffle__RaffleNotOver();
+    error Raffle__RaffleNotOpen();
     error Raffle__onlyRaffleOwnerCanCallThisFunction();
+    error Raffle__TransferToWinnerFailed();
 
-    /* Constants */
+    /* Type Declarations */
+    enum RaffleState { OPEN, CALCULATING }
+
+    /* Constants and Immutable Variables (set in constructor)*/
     uint256 private immutable i_interval;
-
-    /* State Variables */
-    uint256 private immutable i_entranceFee;
-    address payable[] private s_players;
-    uint256 private s_lastRaffleTimestamp;
-
-    /* Chainlink VRF Variables */
-    VRFCoordinatorV2Interface COORDINATOR;
-    LinkTokenInterface LINKTOKEN;
-
-    // Chainlink VRF parameters - Avalanche Fuji Testnet
-    // address immutable i_vrfCoordinator = 0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE;
-    // address immutable i_link_token_contract = 0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846;
-    // bytes32 immutable i_keyHash = 0xc799bd1e3bd4d1a41cd4968997a4e03dfd2a3c7c04b695881138580163f42887;
-    // address private immutable i_vrfCoordinator;
-    address private immutable i_link_token_contract;
-    bytes32 private immutable i_keyHash;
-
     // Misc Chainlink VRF parameters
     uint16 constant REQUEST_CONFIRMATION = 3;
     uint32 constant NUM_WORDS = 1;
     uint32 private immutable i_callbackGasLimit;
+    bool private immutable i_nativePayment;
+    // Chainlink VRF parameters - Avalanche Fuji Testnet
+    // address fuji_vrfCoordinator = 0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE;
+    // address fuji_link_token_contract_address = 0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846;
+    // bytes32 fuji_keyHash = 0xc799bd1e3bd4d1a41cd4968997a4e03dfd2a3c7c04b695881138580163f42887;
+    bytes32 private immutable i_keyHash;
+    
+    /* Link token contract interface */
+    LinkTokenInterface s_LinkToken;
+
+    /* State Variables */   
+    uint256 private immutable i_entranceFee;
+    address payable[] private s_players;
+    uint256 private s_lastRaffleTimestamp;
+    address private s_recentWinner;
+    RaffleState private s_raffleState;
 
     // Storage parameters
     uint256[] public s_randomWords;
     uint256 public s_requestId;
-    uint64 public s_subscriptionId;
+    uint256 public s_subscriptionId;
     address private s_owner;
 
     /* Events */
     event RaffleEntered(address indexed player);
+    event RaffleWinnerPicked(address indexed winner, uint256 winnings);
 
     /* Modifiers */
     modifier onlyRaffleOwner() {
@@ -61,28 +64,29 @@ contract Raffle is VRFConsumerBaseV2Plus {
     }
 
     /* Constructor */
-    constructor(uint256 entranceFee_, uint256 interval_, address owner_, uint32 callbackGasLimit_, address vrfCoordinator_)
+    constructor(uint256 entranceFee_, bool nativePayment_, uint256 interval_, uint32 callbackGasLimit_, address owner_, address linkTokenAddress, address vrfCoordinator_)
         VRFConsumerBaseV2Plus(vrfCoordinator_)
     {
         i_entranceFee = entranceFee_;
+        i_nativePayment = nativePayment_;
         i_interval = interval_;
+        i_callbackGasLimit = callbackGasLimit_;
         s_owner = owner_;
         
-        COORDINATOR = VRFCoordinatorV2Interface(vrfCoordinator_);
-        LINKTOKEN = LinkTokenInterface(i_link_token_contract);
+        s_LinkToken = LinkTokenInterface(linkTokenAddress);
 
         s_lastRaffleTimestamp = block.timestamp;
-        i_callbackGasLimit = callbackGasLimit_;
+        s_raffleState = RaffleState.OPEN;
 
         // Create a new subscription when you deploy the contract.
         createNewSubscription();
     }
-    // Create a new subscription when the contract is initially deployed.
 
+    // Create a new subscription when the contract is initially deployed.
     function createNewSubscription() private onlyRaffleOwner {
-        s_subscriptionId = COORDINATOR.createSubscription();
+        s_subscriptionId = s_vrfCoordinator.createSubscription();
         // Add this contract as a consumer of its own subscription.
-        COORDINATOR.addConsumer(s_subscriptionId, address(this));
+        s_vrfCoordinator.addConsumer(s_subscriptionId, address(this));
     }
 
     /* External Functions */
@@ -90,6 +94,9 @@ contract Raffle is VRFConsumerBaseV2Plus {
         // require(msg.value >= i_entranceFee, "Raffle: Not enough ETH sent to enter.");
         if (msg.value < i_entranceFee) {
             revert Raffle__SendMoreToEnterRaffle();
+        }
+        if (s_raffleState == RaffleState.CALCULATING) {
+            revert Raffle__RaffleNotOpen();
         }
 
         s_players.push(payable(msg.sender));
@@ -104,6 +111,9 @@ contract Raffle is VRFConsumerBaseV2Plus {
             revert Raffle__RaffleNotOver();
         }
 
+        // Close the raffle to prevent more entries
+        s_raffleState = RaffleState.CALCULATING;
+
         // Request random number from Chainlink VRF
         VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient.RandomWordsRequest({
             keyHash: i_keyHash,
@@ -111,52 +121,67 @@ contract Raffle is VRFConsumerBaseV2Plus {
             requestConfirmations: REQUEST_CONFIRMATION,
             callbackGasLimit: i_callbackGasLimit,
             numWords: NUM_WORDS,
-            extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1(false))
+            // Set nativePayment to true to pay the fee in native currency instead of LINK
+            extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: i_nativePayment}))
         });
+
+        uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
+        s_requestId = requestId;
+    }
+
+    /* Chainlink Random Number Callback Override Function */
+    function fulfillRandomWords(uint256, /* requestId */ uint256[] calldata randomWords) internal override {
+        // s_randomWords = randomWords;
+        // Pick winner based on random number
+        uint256 indexOfWinner = randomWords[0] % s_players.length;
+        s_recentWinner = s_players[indexOfWinner];
+
+        // Reset raffle
+        s_raffleState = RaffleState.OPEN;
+        s_players = new address payable[](0);
+        s_lastRaffleTimestamp = block.timestamp;
+
+        uint256 winnings = address(this).balance;
+        emit RaffleWinnerPicked(s_recentWinner, winnings);
+        
+        // Transfer winnings to winner and reset raffle
+        (bool success, ) = s_recentWinner.call{value: winnings}("");
+        if (!success) {
+            revert Raffle__TransferToWinnerFailed();
+        }
+
+        // Emit event - winner picked!
     }
 
     // Chainlink maintenance fuction: Assumes this contract owns link.
     // 1000000000000000000 = 1 LINK
     function topUpSubscription(uint256 amount) external onlyRaffleOwner {
-        LINKTOKEN.transferAndCall(address(COORDINATOR), amount, abi.encode(s_subscriptionId));
+        s_LinkToken.transferAndCall(address(s_vrfCoordinator), amount, abi.encode(s_subscriptionId));
     }
-    // Chainlink automation subscription maintenance fuction
 
+    // Chainlink automation subscription maintenance fuction
     function addConsumer(address consumerAddress) external onlyRaffleOwner {
         // Add a consumer contract to the subscription.
-        COORDINATOR.addConsumer(s_subscriptionId, consumerAddress);
+        s_vrfCoordinator.addConsumer(s_subscriptionId, consumerAddress);
     }
-    // Chainlink automation subscription maintenance fuction
 
+    // Chainlink automation subscription maintenance fuction
     function removeConsumer(address consumerAddress) external onlyRaffleOwner {
         // Remove a consumer contract from the subscription.
-        COORDINATOR.removeConsumer(s_subscriptionId, consumerAddress);
+        s_vrfCoordinator.removeConsumer(s_subscriptionId, consumerAddress);
     }
-    // Chainlink automation subscription maintenance fuction
 
+    // Chainlink automation subscription maintenance fuction
     function cancelSubscription(address receivingWallet) external onlyRaffleOwner {
         // Cancel the subscription and send the remaining LINK to a wallet address.
-        COORDINATOR.cancelSubscription(s_subscriptionId, receivingWallet);
+        s_vrfCoordinator.cancelSubscription(s_subscriptionId, receivingWallet);
         s_subscriptionId = 0;
     }
 
     // Transfer this contract's funds to an address.
     // 1000000000000000000 = 1 LINK
     function withdrawLinkTokens(uint256 amount, address to) external onlyRaffleOwner {
-        LINKTOKEN.transfer(to, amount);
-    }
-
-    /* Chainlink Functions */
-    function fulfillRandomWords(uint256, /* requestId */ uint256[] calldata randomWords) internal override {
-        s_randomWords = randomWords;
-    }
-    // Assumes the subscription is funded sufficiently.
-
-    function requestRandomWords() external {
-        // Will revert if subscription is not set and funded.
-        s_requestId = COORDINATOR.requestRandomWords(
-            i_keyHash, s_subscriptionId, REQUEST_CONFIRMATION, i_callbackGasLimit, NUM_WORDS
-        );
+        s_LinkToken.transfer(to, amount);
     }
 
     /* Getter Functions */
