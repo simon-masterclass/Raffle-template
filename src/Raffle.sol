@@ -20,7 +20,10 @@ contract Raffle is VRFConsumerBaseV2Plus {
     error Raffle__TransferToWinnerFailed();
 
     /* Type Declarations */
-    enum RaffleState { OPEN, CALCULATING }
+    enum RaffleState {
+        OPEN,
+        CALCULATING
+    }
 
     /* Constants and Immutable Variables (set in constructor)*/
     uint256 private immutable i_interval;
@@ -31,14 +34,14 @@ contract Raffle is VRFConsumerBaseV2Plus {
     bool private immutable i_nativePayment;
     // Chainlink VRF parameters - Avalanche Fuji Testnet
     // address fuji_vrfCoordinator = 0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE;
-    // address fuji_link_token_contract_address = 0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846;
+    // address fuji_Link_token_contract_address = 0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846;
     // bytes32 fuji_keyHash = 0xc799bd1e3bd4d1a41cd4968997a4e03dfd2a3c7c04b695881138580163f42887;
     bytes32 private immutable i_keyHash;
-    
+
     /* Link token contract interface */
     LinkTokenInterface s_LinkToken;
 
-    /* State Variables */   
+    /* State Variables */
     uint256 private immutable i_entranceFee;
     address payable[] private s_players;
     uint256 private s_lastRaffleTimestamp;
@@ -47,7 +50,6 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     // Storage parameters
     uint256[] public s_randomWords;
-    uint256 public s_requestId;
     uint256 public s_subscriptionId;
     address private s_owner;
 
@@ -64,21 +66,33 @@ contract Raffle is VRFConsumerBaseV2Plus {
     }
 
     /* Constructor */
-    constructor(uint256 entranceFee_, bool nativePayment_, uint256 interval_, uint32 callbackGasLimit_, address owner_, address linkTokenAddress, address vrfCoordinator_)
-        VRFConsumerBaseV2Plus(vrfCoordinator_)
-    {
+    constructor(
+        uint256 entranceFee_,
+        bool nativePayment_,
+        uint256 interval_,
+        uint32 callbackGasLimit_,
+        address owner_,
+        address linkTokenAddress,
+        uint256 subscriptionId_,
+        address vrfCoordinator_
+    ) VRFConsumerBaseV2Plus(vrfCoordinator_) {
+        // set Immutable Entrance fee
         i_entranceFee = entranceFee_;
+        // if Native Payments is true, VRF services are paid in native currency instead of Link token
         i_nativePayment = nativePayment_;
+        // set Raffle time interval - Weekly, Monthly, etc...
         i_interval = interval_;
         i_callbackGasLimit = callbackGasLimit_;
         s_owner = owner_;
-        
+
         s_LinkToken = LinkTokenInterface(linkTokenAddress);
 
+        // Set initial Raffle starting parameters
         s_lastRaffleTimestamp = block.timestamp;
         s_raffleState = RaffleState.OPEN;
 
         // Create a new subscription when you deploy the contract.
+        s_subscriptionId = subscriptionId_;
         createNewSubscription();
     }
 
@@ -101,6 +115,33 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
         s_players.push(payable(msg.sender));
         emit RaffleEntered(msg.sender);
+    }
+
+    /**
+     * @dev This the function that the Chainlink nodes will call to see
+     * if the lottery is ready to have a winner picked.
+     * The following should be true for for upkeepNeeded to be true:
+     * 1. The time interval has passed between raffles.
+     * 2. The raffle must be open.
+     * 3. The contract has ETH in it.
+     * 4. Implicitly, your subscription has Link in it.
+     * @param - ignore checkData
+     * @return upkeepNeeded - true if the raffle is ready to be picked
+     * @return performData  - empty string
+     */
+
+    function checkUpkeep(bytes calldata /* checkData */ )
+        public
+        view
+        returns (bool upkeepNeeded, bytes memory /* performData */)
+    {
+        bool timeHasPassed = ((block.timestamp - s_lastRaffleTimestamp) >= i_interval);
+        bool isOpen = s_raffleState == RaffleState.OPEN;
+        bool hasBalance = address(this).balance > 0;
+        bool hasPlayers = s_players.length > 0;
+
+        bool upKeepNeeded = timeHasPassed && isOpen && hasBalance && hasPlayers;
+        return (upKeepNeeded, "");
     }
 
     function pickWinner() external onlyRaffleOwner {
@@ -126,7 +167,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         });
 
         uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
-        s_requestId = requestId;
+        requestId;
     }
 
     /* Chainlink Random Number Callback Override Function */
@@ -143,9 +184,9 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
         uint256 winnings = address(this).balance;
         emit RaffleWinnerPicked(s_recentWinner, winnings);
-        
+
         // Transfer winnings to winner and reset raffle
-        (bool success, ) = s_recentWinner.call{value: winnings}("");
+        (bool success,) = s_recentWinner.call{value: winnings}("");
         if (!success) {
             revert Raffle__TransferToWinnerFailed();
         }

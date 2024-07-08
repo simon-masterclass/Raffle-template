@@ -7,7 +7,6 @@ pragma solidity ^0.8.25;
  * @notice This contract is just for testing gas costs of different revert types
  * @dev test it out in Remix or Foundry gas snapshot tool, etc.
  */
-
 contract RaffleGas {
     uint256 private immutable i_entranceFee;
 
