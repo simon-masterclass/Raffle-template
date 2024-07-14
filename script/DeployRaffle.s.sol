@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.20;
 
 /**
@@ -12,16 +11,30 @@ pragma solidity ^0.8.20;
 
 import {Script} from "forge-std/Script.sol";
 import {Raffle} from "src/Raffle.sol";
+import {HelperConfig} from "script/HelperConfig.s.sol";
 
 contract DeplyRaffle is Script {
-
-    function run() public {
-
-
-    }
+    function run() public {}
 
     function deployContract() public returns (Raffle, HelperConfig) {
+        HelperConfig helperConfig = new HelperConfig();
+        // If local chain => Get or set the local network config
+        // If Fuji Avax chain => Get the Fuji Avax network config
+        HelperConfig.NetworkConfig memory config = helperConfig.getConfig();
 
-    }   
-
+        // Deploy Raffle contract
+        vm.startBroadcast();
+        Raffle raffle = new Raffle(
+            config.entranceFee,
+            config.interval,
+            config.nativePayment,
+            config.callbackGasLimit,
+            msg.sender, // Owner of the contract - TBD
+            config.linkTokenAddress,
+            config.keyHash4GasLane,
+            config.subscriptionId,
+            config.vrfCoordinator);
+        vm.stopBroadcast();
+        return (raffle, helperConfig);
+    }
 }

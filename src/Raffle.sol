@@ -7,6 +7,7 @@ pragma solidity ^0.8.20;
  * @notice This contract is a work in progress and is not yet ready for deployment.
  * @dev Implements Chainlink VRFv2 for random number generation
  */
+
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
@@ -87,7 +88,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         s_owner = owner_;
 
         s_LinkToken = LinkTokenInterface(linkTokenAddress);
-        i_keyHash = keyHash4GasLane_;
+        i_keyHash4GasLane = keyHash4GasLane_;
 
         // Set initial Raffle starting parameters
         s_lastRaffleTimestamp = block.timestamp;
@@ -131,11 +132,10 @@ contract Raffle is VRFConsumerBaseV2Plus {
      * @return upkeepNeeded - true if the raffle is ready to be picked
      * @return performData  - empty string - it is not used in this contract
      */
-
     function checkUpkeep(bytes memory /* checkData */ )
         public
         view
-        returns (bool upkeepNeeded, bytes memory /* performData */)
+        returns (bool upkeepNeeded, bytes memory /* performData */ )
     {
         bool timeHasPassed = ((block.timestamp - s_lastRaffleTimestamp) >= i_interval);
         bool isOpen = s_raffleState == RaffleState.OPEN;
@@ -146,7 +146,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         return (upKeepNeeded, "");
     }
 
-    function performUpkeep(bytes calldata /* performData */) external {
+    function performUpkeep(bytes calldata /* performData */ ) external {
         // 1. Get random number from Chainlink VRF
         // 2. Pick winner based on random number (automatically done by Chainlink VRF)
         // 3. Transfer winnings to winner and reset raffle
@@ -174,7 +174,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     }
 
     /* Chainlink Random Number Callback Override Function */
-    function fulfillRandomWords(uint256 /* requestId */, uint256[] calldata randomWords) internal override {
+    function fulfillRandomWords(uint256, /* requestId */ uint256[] calldata randomWords) internal override {
         // s_randomWords = randomWords;
         // Pick winner based on random number
         uint256 indexOfWinner = randomWords[0] % s_players.length;
