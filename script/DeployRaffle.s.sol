@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.;
+pragma solidity ^0.8.20;
 
 /**
  * @title DeployRaffle
@@ -10,6 +10,18 @@ pragma solidity ^0.8.;
  * @dev specifically designed for Avalanche Fuji Testnet
  */
 
-contract DeplyRaffle {
+import {Script} from "forge-std/Script.sol";
+import {Raffle} from "src/Raffle.sol";
+
+contract DeplyRaffle is Script {
+
+    function run() public {
+
+
+    }
+
+    function deployContract() public returns (Raffle, HelperConfig) {
+
+    }   
 
 }

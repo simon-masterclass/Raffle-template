@@ -36,7 +36,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     // address fuji_vrfCoordinator = 0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE;
     // address fuji_Link_token_contract_address = 0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846;
     // bytes32 fuji_keyHash = 0xc799bd1e3bd4d1a41cd4968997a4e03dfd2a3c7c04b695881138580163f42887;
-    bytes32 private immutable i_keyHash;
+    bytes32 private immutable i_keyHash4GasLane;
 
     /* Link token contract interface */
     LinkTokenInterface s_LinkToken;
@@ -68,24 +68,26 @@ contract Raffle is VRFConsumerBaseV2Plus {
     /* Constructor */
     constructor(
         uint256 entranceFee_,
-        bool nativePayment_,
         uint256 interval_,
+        bool nativePayment_,
         uint32 callbackGasLimit_,
         address owner_,
         address linkTokenAddress,
+        bytes32 keyHash4GasLane_,
         uint256 subscriptionId_,
         address vrfCoordinator_
     ) VRFConsumerBaseV2Plus(vrfCoordinator_) {
         // set Immutable Entrance fee
         i_entranceFee = entranceFee_;
-        // if Native Payments is true, VRF services are paid in native currency instead of Link token
-        i_nativePayment = nativePayment_;
         // set Raffle time interval - Weekly, Monthly, etc...
         i_interval = interval_;
+        // if Native Payments is true, VRF services are paid in native currency instead of Link token
+        i_nativePayment = nativePayment_;
         i_callbackGasLimit = callbackGasLimit_;
         s_owner = owner_;
 
         s_LinkToken = LinkTokenInterface(linkTokenAddress);
+        i_keyHash = keyHash4GasLane_;
 
         // Set initial Raffle starting parameters
         s_lastRaffleTimestamp = block.timestamp;
@@ -97,7 +99,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     }
 
     // Create a new subscription when the contract is initially deployed.
-    function createNewSubscription() private onlyRaffleOwner {
+    function createNewSubscription() internal {
         s_subscriptionId = s_vrfCoordinator.createSubscription();
         // Add this contract as a consumer of its own subscription.
         s_vrfCoordinator.addConsumer(s_subscriptionId, address(this));
@@ -158,7 +160,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
         // Request random number from Chainlink VRF
         VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient.RandomWordsRequest({
-            keyHash: i_keyHash,
+            keyHash: i_keyHash4GasLane,
             subId: s_subscriptionId,
             requestConfirmations: REQUEST_CONFIRMATION,
             callbackGasLimit: i_callbackGasLimit,
