@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 /**
  * @title Raffle contract with provably fair random number generation
@@ -7,7 +7,6 @@ pragma solidity ^0.8.20;
  * @notice This contract is a work in progress and is not yet ready for deployment.
  * @dev Implements Chainlink VRFv2 for random number generation
  */
-
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
@@ -34,9 +33,9 @@ contract Raffle is VRFConsumerBaseV2Plus {
     uint32 private immutable i_callbackGasLimit;
     bool private immutable i_nativePayment;
     // Chainlink VRF parameters - Avalanche Fuji Testnet
-    // address fuji_vrfCoordinator = 0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE;
     // address fuji_Link_token_contract_address = 0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846;
     // bytes32 fuji_keyHash = 0xc799bd1e3bd4d1a41cd4968997a4e03dfd2a3c7c04b695881138580163f42887;
+    // address fuji_vrfCoordinator = 0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE;
     bytes32 private immutable i_keyHash4GasLane;
 
     /* Link token contract interface */
@@ -96,7 +95,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
         // Create a new subscription when you deploy the contract.
         s_subscriptionId = subscriptionId_;
-        createNewSubscription();
+        // createNewSubscription();
     }
 
     // Create a new subscription when the contract is initially deployed.
@@ -231,6 +230,10 @@ contract Raffle is VRFConsumerBaseV2Plus {
     /* Getter Functions */
     function getEntranceFee() public view returns (uint256) {
         return i_entranceFee;
+    }
+
+    function getRaffleState() public view returns (RaffleState) {
+        return s_raffleState;
     }
 }
 

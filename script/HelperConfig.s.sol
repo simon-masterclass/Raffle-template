@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 /**
  * @title HelperConfig
@@ -8,7 +8,6 @@ pragma solidity ^0.8.20;
  * @dev This contract provides configuration parameters that will enable
  * @dev the Raffle contract to be deployed on any EVM-compatible chain
  */
-
 import {Script} from "forge-std/Script.sol";
 import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
@@ -44,12 +43,12 @@ contract HelperConfig is Script, CodeConstants {
         networkConfigs[AVAX_FUJI_CHAINID] = getFujiAvaxNetworkConfig();
     }
 
-    function getConfig() public view returns (NetworkConfig memory) {
+    function getConfig() public returns (NetworkConfig memory) {
         return getConfigByChainId(block.chainid);
     }
 
-    function getConfigByChainId(uint256 chainId) public view returns (NetworkConfig memory) {
-        if (networkConfigs[chainId].vrfCoordinator == address(0)) {
+    function getConfigByChainId(uint256 chainId) public returns (NetworkConfig memory) {
+        if (networkConfigs[chainId].vrfCoordinator != address(0)) {
             return networkConfigs[chainId];
         } else if (chainId == LOCAL_CHAINID) {
             // get or set local network config
@@ -61,7 +60,7 @@ contract HelperConfig is Script, CodeConstants {
 
     function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory) {
         // get or set Anvil Eth network config
-        if (localNetworkConfig.vrfCoordinator == address(0)) {
+        if (localNetworkConfig.vrfCoordinator != address(0)) {
             return localNetworkConfig;
         }
 
@@ -74,13 +73,13 @@ contract HelperConfig is Script, CodeConstants {
 
         // Set local network config
         localNetworkConfig = NetworkConfig({
-            entranceFee: 1e18, // 1 AVAX or 10^18 wei (units only)
+            entranceFee: 1e18, // 10^18 wei (units only)
             interval: 30, // 30 seconds
             nativePayment: false,
             callbackGasLimit: 500000,
-            // Might need to change this
+            // Might need to change this for the mock Link token
             linkTokenAddress: 0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846,
-            // Doesn't matter for the mock
+            // Doesn't matter for the mock - using the same keyHash as Fuji
             keyHash4GasLane: 0xc799bd1e3bd4d1a41cd4968997a4e03dfd2a3c7c04b695881138580163f42887,
             subscriptionId: 0,
             vrfCoordinator: address(vrfCoordinatorMock)
@@ -91,7 +90,7 @@ contract HelperConfig is Script, CodeConstants {
 
     function getFujiAvaxNetworkConfig() public pure returns (NetworkConfig memory) {
         return NetworkConfig({
-            entranceFee: 1000000000000000000, // 1 AVAX or 10^18 wei AKA 1e18
+            entranceFee: 1e18, // 1 AVAX or 10^18 wei (units only)
             interval: 30, // 30 seconds
             nativePayment: false,
             callbackGasLimit: 500000,
