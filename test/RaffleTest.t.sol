@@ -22,15 +22,19 @@ contract RaffleTest is Test {
     address public PLAYER = makeAddr("player");
     uint256 public STARTING_PLAYER_BALANCE = 10 ether;
 
-    // Helper Config values
-    uint256 entranceFee;
-    uint256 interval;
-    bool nativePayment; //extra variable - will probably require refactoring to implemnt if nativePayment is true
-    uint32 callbackGasLimit;
-    address linkTokenAddress; // thinking ahead
-    bytes32 keyHash4GasLane;
-    uint256 subscriptionId;
-    address vrfCoordinator;
+    // Helper Config values - will be used to setup the tests 
+    uint256 public entranceFee;
+    uint256 public interval;
+    bool public nativePayment; //extra variable - will probably require refactoring to implemnt if nativePayment is true
+    uint32 public callbackGasLimit;
+    address public linkTokenAddress; // thinking ahead
+    bytes32 public keyHash4GasLane;
+    uint256 public subscriptionId;
+    address public vrfCoordinator;
+
+    /* Events */
+    event RaffleEntered(address indexed player);
+    event RaffleWinnerPicked(address indexed winner, uint256 winnings);
 
     /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
                         TEST INITIALIZATION SETUP
@@ -83,9 +87,37 @@ contract RaffleTest is Test {
            // Execute: Enter the raffle
            raffle.enterRaffle{value: entranceFee}();           
         // ASSERT
-           // Verify: The player is recorded in the raffle
+           // Verify: The player is recorded in the raffle contract
            address playerRecorded = raffle.getPlayer(0);
            assert(playerRecorded == PLAYER);
     }
 
+    function test_EnteringRaffleEmitsEvent() public {
+        // ARRANGE
+           // Setup: Next transaction will be from the player's address
+           vm.prank(PLAYER);
+        // ACT
+           // Execute: Tell foundry the event to expect
+           vm.expectEmit(true, false, false, false, address(raffle));
+           emit RaffleEntered(address(PLAYER));
+        // ASSERT
+           // Verify: Enter the raffle and expect the event to be emitted
+           raffle.enterRaffle{value: entranceFee}();
+    }
+    
+    function test_DoNotAllowPlayerToEnterWhenRaffleIsCalculating() public {
+        // ARRANGE
+           // Setup: Next transaction will be from the player's address
+           vm.prank(PLAYER);
+           raffle.enterRaffle{value: entranceFee}();
+           // Setup: Move time + block number forward to when the raffle is calculating
+           vm.warp(block.timestamp + interval + 1);
+           vm.roll(block.number + 1);
+        // ACT + ASSERT
+            // Act: Next transaction will be from the player's address
+            vm.prank(PLAYER);
+            // Execute + Verify: Expect Revert when player tries to enter the raffle
+            vm.expectRevert(Raffle.Raffle__RaffleNotOpen.selector);
+            raffle.enterRaffle{value: entranceFee}();
+    }
 }

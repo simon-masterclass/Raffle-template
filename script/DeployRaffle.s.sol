@@ -2,12 +2,13 @@
 pragma solidity ^0.8.21;
 
 /**
- * @title DeployRaffle
+ * @title Deploy Raffle Contract Script
  * @author c0 | X: @c0mmanderZero
  * @notice test script for deploying Raffle contract
  * @dev This deploy script allows deployment to any EVM-compatible chain but is
  * @dev specifically designed for Avalanche Fuji Testnet
  */
+
 import {Script} from "forge-std/Script.sol";
 import {Raffle} from "src/Raffle.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
@@ -23,7 +24,13 @@ contract DeployRaffle is Script {
         // If local chain => Get or set the local network config
         // If Fuji Avax chain => Get the Fuji Avax network config
         HelperConfig.NetworkConfig memory config = helperConfig.getConfig();
+        // Owner of the contract - TBD
         owner = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
+
+        if (config.subscriptionId == 0) {
+            // Create a new subscription
+            
+        }
 
         // Deploy Raffle contract
         vm.startBroadcast();

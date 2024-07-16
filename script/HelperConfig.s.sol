@@ -2,12 +2,13 @@
 pragma solidity ^0.8.21;
 
 /**
- * @title HelperConfig
+ * @title Helper Configuration Contract for Deploying Raffle Contract
  * @author c0 | X: @c0mmanderZero
  * @notice Helper contract for configuring Raffle contract
  * @dev This contract provides configuration parameters that will enable
  * @dev the Raffle contract to be deployed on any EVM-compatible chain
  */
+
 import {Script} from "forge-std/Script.sol";
 import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
@@ -73,7 +74,7 @@ contract HelperConfig is Script, CodeConstants {
 
         // Set local network config
         localNetworkConfig = NetworkConfig({
-            entranceFee: 1e18, // 10^18 wei (units only)
+            entranceFee: 100, // 10^18 wei (units only)
             interval: 30, // 30 seconds
             nativePayment: false,
             callbackGasLimit: 500000,
@@ -90,7 +91,7 @@ contract HelperConfig is Script, CodeConstants {
 
     function getFujiAvaxNetworkConfig() public pure returns (NetworkConfig memory) {
         return NetworkConfig({
-            entranceFee: 1e18, // 1 AVAX or 10^18 wei (units only)
+            entranceFee: 100, // 1 AVAX or 10^18 wei (units only)
             interval: 30, // 30 seconds
             nativePayment: false,
             callbackGasLimit: 500000,
