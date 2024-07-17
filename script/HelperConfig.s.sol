@@ -11,6 +11,7 @@ pragma solidity ^0.8.21;
 
 import {Script} from "forge-std/Script.sol";
 import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
+import {LinkToken} from "test/mocks/LinkToken.sol";
 
 abstract contract CodeConstants {
     // VRF Mock Values - Don't really matter for the Mock
@@ -70,6 +71,7 @@ contract HelperConfig is Script, CodeConstants {
         //Deploy Mocks
         VRFCoordinatorV2_5Mock vrfCoordinatorMock =
             new VRFCoordinatorV2_5Mock(MOCK_BASE_FEE, MOCK_GAS_PRICE_LINK, MOCK_WEI_PER_UNIT_LINK);
+            LinkToken linkToken = new LinkToken();
         vm.stopBroadcast();
 
         // Set local network config
@@ -79,7 +81,7 @@ contract HelperConfig is Script, CodeConstants {
             nativePayment: false,
             callbackGasLimit: 500000,
             // Might need to change this for the mock Link token
-            linkTokenAddress: 0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846,
+            linkTokenAddress: address(linkToken),
             // Doesn't matter for the mock - using the same keyHash as Fuji
             keyHash4GasLane: 0xc799bd1e3bd4d1a41cd4968997a4e03dfd2a3c7c04b695881138580163f42887,
             subscriptionId: 0,

@@ -7,7 +7,6 @@ pragma solidity ^0.8.19;
  * @notice This contract is a work in progress and is not yet ready for deployment.
  * @dev Implements Chainlink VRFv2 for random number generation
  */
-
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
@@ -66,7 +65,10 @@ contract Raffle is VRFConsumerBaseV2Plus {
         _;
     }
 
-    /* Constructor */
+   /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
+                           CONSTRUCTOR
+    *|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
+   
     constructor(
         uint256 entranceFee_,
         uint256 interval_,
@@ -106,7 +108,10 @@ contract Raffle is VRFConsumerBaseV2Plus {
         s_vrfCoordinator.addConsumer(s_subscriptionId, address(this));
     }
 
-    /* External Functions */
+    /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
+                            EXTERNAL FUNCTIONS
+     *|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
+    
     function enterRaffle() external payable {
         // require(msg.value >= i_entranceFee, "Raffle: Not enough ETH sent to enter.");
         if (msg.value < i_entranceFee) {
@@ -231,7 +236,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
                             GETTER FUNCTIONS
      *|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
-    
+
     function getEntranceFee() public view returns (uint256) {
         return i_entranceFee;
     }
@@ -239,9 +244,8 @@ contract Raffle is VRFConsumerBaseV2Plus {
     function getRaffleState() public view returns (RaffleState) {
         return s_raffleState;
     }
-    
+
     function getPlayer(uint256 index) public view returns (address) {
         return s_players[index];
     }
 }
-

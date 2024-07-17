@@ -8,10 +8,10 @@ pragma solidity ^0.8.21;
  * @dev This deploy script allows deployment to any EVM-compatible chain but is
  * @dev specifically designed for Avalanche Fuji Testnet
  */
-
 import {Script} from "forge-std/Script.sol";
 import {Raffle} from "src/Raffle.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
+import {CreateSubscription} from "script/Interactions.s.sol";
 
 contract DeployRaffle is Script {
     // Owner of the contract - TBD
@@ -29,7 +29,8 @@ contract DeployRaffle is Script {
 
         if (config.subscriptionId == 0) {
             // Create a new subscription
-            
+            CreateSubscription createSubId = new CreateSubscription();
+            (config.subscriptionId, config.vrfCoordinator) = createSubId.createSubscription(config.vrfCoordinator);
         }
 
         // Deploy Raffle contract
@@ -46,6 +47,7 @@ contract DeployRaffle is Script {
             config.vrfCoordinator
         );
         vm.stopBroadcast();
+        
         return (raffle, helperConfig);
     }
 }
