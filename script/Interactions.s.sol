@@ -15,6 +15,7 @@ import {Script, console2} from "forge-std/Script.sol";
 import {HelperConfig, CodeConstants} from "script/HelperConfig.s.sol";
 import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 import {LinkToken} from "test/mocks/LinkToken.sol";
+import {DevOpsTools} from "lib/foundry-devops/src/DevOpsTools.sol";
 
 contract CreateSubscription is Script {
     function run() public {
@@ -38,7 +39,7 @@ contract CreateSubscription is Script {
         console2.log("Please update the subscription Id in your helperConfig.s.sol");
 
         return (subId, vrfCoordinator);
-    }
+    }   
 }
 
 contract FundSubscription is Script, CodeConstants {
@@ -63,15 +64,49 @@ contract FundSubscription is Script, CodeConstants {
         console2.log("Funded Using Chainlink VRF Coordinator: ", vrfCoordinator_);
         // Call vrfCoordinator on the specified Network to fund subscription
         if (block.chainid == LOCAL_CHAINID) {
+            console2.log(LinkToken(linkToken_).balanceOf(msg.sender));
+            console2.log(msg.sender);
+            console2.log(LinkToken(linkToken_).balanceOf(address(this)));
+            console2.log(address(this));
             vm.startBroadcast();
                 VRFCoordinatorV2_5Mock(vrfCoordinator_).fundSubscription(subId_, FUND_AMOUNT);  
             vm.stopBroadcast();
         } else {
+            console2.log(LinkToken(linkToken_).balanceOf(msg.sender));
+            console2.log(msg.sender);
+            console2.log(LinkToken(linkToken_).balanceOf(address(this)));
+            console2.log(address(this));
             vm.startBroadcast();
                 LinkToken(linkToken_).transferAndCall(vrfCoordinator_, FUND_AMOUNT, abi.encode(subId_));
             vm.stopBroadcast();
         }
         console2.log("Funded Your VRF subscription with this much Link:", FUND_AMOUNT);
     }
+}
 
+contract AddConsumer is Script {
+
+    function run() public {
+        address mostRecentDeployed = DevOpsTools.get_most_recent_deployment("Raffle", block.chainid);
+        addConsumerUsingConfig(mostRecentDeployed);
+    }
+
+    function addConsumerUsingConfig(address mostRecentDeployment_) public {
+        HelperConfig helperConfig = new HelperConfig();
+        uint256 subscriptionId = helperConfig.getConfig().subscriptionId;
+        address vrfCoordinator = helperConfig.getConfig().vrfCoordinator;
+
+        addConsumer(mostRecentDeployment_, vrfCoordinator, subscriptionId);
+    }
+
+    function addConsumer(address contractToAddToVRF, address vrfCoordinator, uint256 subId) public {
+        console2.log("Adding Consumer to VRF subscription on Chain Id: ", block.chainid);
+        console2.log("Adding Consumer to Chainlink VRF Coordinator: ", vrfCoordinator);
+        console2.log("Adding Consumer to Chainlink VRF subscription Id: ", subId);
+        console2.log("Adding Consumer to Raffle contract: ", contractToAddToVRF);
+        // Call vrfCoordinator on the specified Network to add consumer
+        vm.startBroadcast();
+            VRFCoordinatorV2_5Mock(vrfCoordinator).addConsumer(subId, contractToAddToVRF);
+        vm.stopBroadcast(); 
+    }
 }

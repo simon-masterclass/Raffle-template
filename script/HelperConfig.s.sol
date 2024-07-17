@@ -9,7 +9,7 @@ pragma solidity ^0.8.21;
  * @dev the Raffle contract to be deployed on any EVM-compatible chain
  */
 
-import {Script} from "forge-std/Script.sol";
+import {Script, console2} from "forge-std/Script.sol";
 import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 import {LinkToken} from "test/mocks/LinkToken.sol";
 
@@ -65,13 +65,15 @@ contract HelperConfig is Script, CodeConstants {
         if (localNetworkConfig.vrfCoordinator != address(0)) {
             return localNetworkConfig;
         }
-
+        console2.log("You have deployed a mock conract!");
+        console2.log("Make sure this was intentional");
         //Deploy Mocks, setup local network config, etc...
         vm.startBroadcast();
         //Deploy Mocks
         VRFCoordinatorV2_5Mock vrfCoordinatorMock =
             new VRFCoordinatorV2_5Mock(MOCK_BASE_FEE, MOCK_GAS_PRICE_LINK, MOCK_WEI_PER_UNIT_LINK);
             LinkToken linkToken = new LinkToken();
+            uint256 subId = vrfCoordinatorMock.createSubscription();
         vm.stopBroadcast();
 
         // Set local network config
@@ -84,7 +86,7 @@ contract HelperConfig is Script, CodeConstants {
             linkTokenAddress: address(linkToken),
             // Doesn't matter for the mock - using the same keyHash as Fuji
             keyHash4GasLane: 0xc799bd1e3bd4d1a41cd4968997a4e03dfd2a3c7c04b695881138580163f42887,
-            subscriptionId: 0,
+            subscriptionId: subId,
             vrfCoordinator: address(vrfCoordinatorMock)
         });
 

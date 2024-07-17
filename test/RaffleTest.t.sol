@@ -56,7 +56,7 @@ contract RaffleTest is Test {
         vrfCoordinator = config.vrfCoordinator;
 
         // Fund player
-        vm.deal(PLAYER, entranceFee * 2);
+        vm.deal(PLAYER, STARTING_PLAYER_BALANCE);
     }
 
     function test_RaffleInitializesInOpenState() public view {
@@ -112,9 +112,9 @@ contract RaffleTest is Test {
         raffle.enterRaffle{value: entranceFee}();
         // Setup: Move time + block number forward to when the raffle is calculating
         vm.warp(block.timestamp + interval + 1);
-        vm.roll(block.number + 1);
+        vm.roll(block.number + 2);
         // ACT + ASSERT
-        // Act: Next transaction will be from the player's address
+        // Next transaction will be from the player's address
         vm.prank(PLAYER);
         // Execute + Verify: Expect Revert when player tries to enter the raffle
         vm.expectRevert(Raffle.Raffle__RaffleNotOpen.selector);
