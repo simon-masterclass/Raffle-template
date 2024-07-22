@@ -7,9 +7,12 @@ pragma solidity ^0.8.19;
  * @notice This contract is a work in progress and is not yet ready for deployment.
  * @dev Implements Chainlink VRFv2 for random number generation
  */
+
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
+// temporary import for testing
+import {console2} from "forge-std/Script.sol";
 
 contract Raffle is VRFConsumerBaseV2Plus {
     /* Error Codes */
@@ -98,14 +101,6 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
         // Create a new subscription when you deploy the contract.
         s_subscriptionId = subscriptionId_;
-        // createNewSubscription();
-    }
-
-    // Create a new subscription when the contract is initially deployed.
-    function createNewSubscription() internal {
-        s_subscriptionId = s_vrfCoordinator.createSubscription();
-        // Add this contract as a consumer of its own subscription.
-        s_vrfCoordinator.addConsumer(s_subscriptionId, address(this));
     }
 
     /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
@@ -155,6 +150,9 @@ contract Raffle is VRFConsumerBaseV2Plus {
         // 1. Get random number from Chainlink VRF
         // 2. Pick winner based on random number (automatically done by Chainlink VRF)
         // 3. Transfer winnings to winner and reset raffle
+
+        console2.log("Raffle State before: ", uint(s_raffleState));
+
         (bool upKeepNeeded,) = checkUpkeep("");
         if (!upKeepNeeded) {
             revert Raffle__UpkeepNotNeeded(address(this).balance, s_players.length, uint256(s_raffleState));
@@ -162,6 +160,8 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
         // Close the raffle to prevent more entries
         s_raffleState = RaffleState.CALCULATING;
+
+        console2.log("Raffle State after: ", uint(s_raffleState));
 
         // Request random number from Chainlink VRF
         VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient.RandomWordsRequest({
@@ -175,7 +175,8 @@ contract Raffle is VRFConsumerBaseV2Plus {
         });
 
         uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
-        requestId;
+
+        console2.log("Request Id: ",requestId);
     }
 
     /* Chainlink Random Number Callback Override Function */
@@ -204,34 +205,34 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     // Chainlink maintenance fuction: Assumes this contract owns link.
     // 1000000000000000000 = 1 LINK
-    function topUpSubscription(uint256 amount) external onlyRaffleOwner {
-        s_LinkToken.transferAndCall(address(s_vrfCoordinator), amount, abi.encode(s_subscriptionId));
-    }
+    // function topUpSubscription(uint256 amount) external onlyRaffleOwner {
+    //     s_LinkToken.transferAndCall(address(s_vrfCoordinator), amount, abi.encode(s_subscriptionId));
+    // }
 
-    // Chainlink automation subscription maintenance fuction
-    function addConsumer(address consumerAddress) external onlyRaffleOwner {
-        // Add a consumer contract to the subscription.
-        s_vrfCoordinator.addConsumer(s_subscriptionId, consumerAddress);
-    }
+    // // Chainlink automation subscription maintenance fuction
+    // function addConsumer(address consumerAddress) external onlyRaffleOwner {
+    //     // Add a consumer contract to the subscription.
+    //     s_vrfCoordinator.addConsumer(s_subscriptionId, consumerAddress);
+    // }
 
-    // Chainlink automation subscription maintenance fuction
-    function removeConsumer(address consumerAddress) external onlyRaffleOwner {
-        // Remove a consumer contract from the subscription.
-        s_vrfCoordinator.removeConsumer(s_subscriptionId, consumerAddress);
-    }
+    // // Chainlink automation subscription maintenance fuction
+    // function removeConsumer(address consumerAddress) external onlyRaffleOwner {
+    //     // Remove a consumer contract from the subscription.
+    //     s_vrfCoordinator.removeConsumer(s_subscriptionId, consumerAddress);
+    // }
 
-    // Chainlink automation subscription maintenance fuction
-    function cancelSubscription(address receivingWallet) external onlyRaffleOwner {
-        // Cancel the subscription and send the remaining LINK to a wallet address.
-        s_vrfCoordinator.cancelSubscription(s_subscriptionId, receivingWallet);
-        s_subscriptionId = 0;
-    }
+    // // Chainlink automation subscription maintenance fuction
+    // function cancelSubscription(address receivingWallet) external onlyRaffleOwner {
+    //     // Cancel the subscription and send the remaining LINK to a wallet address.
+    //     s_vrfCoordinator.cancelSubscription(s_subscriptionId, receivingWallet);
+    //     s_subscriptionId = 0;
+    // }
 
-    // Transfer this contract's funds to an address.
-    // 1000000000000000000 = 1 LINK
-    function withdrawLinkTokens(uint256 amount, address to) external onlyRaffleOwner {
-        s_LinkToken.transfer(to, amount);
-    }
+    // // Transfer this contract's funds to an address.
+    // // 1000000000000000000 = 1 LINK
+    // function withdrawLinkTokens(uint256 amount, address to) external onlyRaffleOwner {
+    //     s_LinkToken.transfer(to, amount);
+    // }
 
     /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
                             GETTER FUNCTIONS

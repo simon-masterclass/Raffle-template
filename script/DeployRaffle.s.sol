@@ -9,7 +9,7 @@ pragma solidity ^0.8.21;
  * @dev specifically designed for Avalanche Fuji Testnet
  */
 
-import {Script} from "forge-std/Script.sol";
+import {Script, console2} from "forge-std/Script.sol";
 import {Raffle} from "src/Raffle.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
 import {CreateSubscription, FundSubscription, AddConsumer} from "script/Interactions.s.sol";
@@ -26,39 +26,26 @@ contract DeployRaffle is Script {
         HelperConfig helperConfig = new HelperConfig();
         // If local chain => Get or set the local network config
         // If Fuji Avax chain => Get the Fuji Avax network config
-        HelperConfig.NetworkConfig memory config = helperConfig.getConfig();
-        // Owner of the contract - TBD
-        owner = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
+        HelperConfig.NetworkConfig memory config = helperConfig.getConfig();  
 
         if (config.subscriptionId == 0) {
             // Create a new subscription
             CreateSubscription createSubId = new CreateSubscription();
-            (config.subscriptionId,) = createSubId.createSubscription(config.vrfCoordinator);
+            (config.subscriptionId, /* vrfCordinator */) = createSubId.createSubscription(config.vrfCoordinator, config.owner);
 
             // Fund subscription with Link tokens
             FundSubscription fundSub = new FundSubscription();
-            fundSub.fundSubscription(config.vrfCoordinator, config.subscriptionId, config.linkTokenAddress);
+            fundSub.fundSubscription(config.vrfCoordinator, config.subscriptionId, config.linkTokenAddress, config.owner);
         }
 
-        // if (block.chainid == 31337) {
-        //     // Create a new subscription
-        //     CreateSubscription createSubId2 = new CreateSubscription();
-        //     (config.subscriptionId,) = createSubId2.createSubscription(config.vrfCoordinator);
-        //     // Fund mock subscription with Link tokens
-        //     FundSubscription fundSubscription = new FundSubscription();
-        //     fundSubscription.fundSubscription(
-        //         config.vrfCoordinator, config.subscriptionId, config.linkTokenAddress
-        //     );
-        // }
-
         // Deploy Raffle contract
-        vm.startBroadcast();
+        vm.startBroadcast(config.owner);
         Raffle raffle = new Raffle(
             config.entranceFee,
             config.interval,
             config.nativePayment,
             config.callbackGasLimit,
-            owner, // Owner of the contract - TBD
+            config.owner, // Owner of the contract - TBD - set OWNER_DEPLOYER in HelperConfig
             config.linkTokenAddress,
             config.keyHash4GasLane,
             config.subscriptionId,
@@ -68,7 +55,9 @@ contract DeployRaffle is Script {
 
         // Add Raffle contract as a consumer
         AddConsumer addConsumer = new AddConsumer();
-        addConsumer.addConsumer(address(raffle), config.vrfCoordinator, config.subscriptionId);
+        // addConsumer.run();
+        // addConsumer.addConsumerUsingConfig(address(raffle));
+        addConsumer.addConsumer(address(raffle), config.vrfCoordinator, config.subscriptionId, config.owner);
         
         return (raffle, helperConfig);
     }

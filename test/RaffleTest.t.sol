@@ -12,11 +12,17 @@ import {Raffle} from "src/Raffle.sol";
 import {DeployRaffle} from "script/DeployRaffle.s.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
 import {Test} from "forge-std/Test.sol";
+import {console2} from "forge-std/Script.sol";
+// temporary import for testing
+import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
+import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
 contract RaffleTest is Test {
     // Contracts - Raffle and HelperConfig
     Raffle public raffle;
     HelperConfig public helperConfig;
+    using console2 for *;
 
     // Test Player
     address public PLAYER = makeAddr("player");
@@ -105,19 +111,41 @@ contract RaffleTest is Test {
         raffle.enterRaffle{value: entranceFee}();
     }
 
-    function test_DoNotAllowPlayerToEnterWhenRaffleIsCalculating() public {
+    function test_UpkeepNeededWhenTimeToCalculateRaffle() public {
         // ARRANGE
         // Setup: Next transaction will be from the player's address
         vm.prank(PLAYER);
         raffle.enterRaffle{value: entranceFee}();
         // Setup: Move time + block number forward to when the raffle is calculating
         vm.warp(block.timestamp + interval + 1);
-        vm.roll(block.number + 2);
-        // ACT + ASSERT
-        // Next transaction will be from the player's address
+        vm.roll(block.number + 1);
+        // ACT
+        // Execute: Check if upkeep is needed
+        (bool upKeepNeeded,) = raffle.checkUpkeep("");
+        // ASSERT
+        // Verify: Expect upkeep to be needed
+        assert(upKeepNeeded == true);
+    }
+
+    function test_DoNotAllowPlayerToEnterWhenRaffleIsCalculating() public {
+        // ARRANGE
         vm.prank(PLAYER);
-        // Execute + Verify: Expect Revert when player tries to enter the raffle
-        vm.expectRevert(Raffle.Raffle__RaffleNotOpen.selector);
         raffle.enterRaffle{value: entranceFee}();
+        // Setup: Move time + block number forward to when the raffle is calculating
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+
+        // ACT
+        raffle.performUpkeep("");
+
+        // ASSERT
+        // EXTRA TEST: Ensure the state of the raffle is calculating
+        Raffle.RaffleState raffleState = raffle.getRaffleState(); 
+        assert(raffleState == Raffle.RaffleState.CALCULATING); 
+        
+        // Execute + Verify: Expect Revert when player tries to enter the raffle
+        vm.prank(PLAYER);
+        vm.expectRevert(Raffle.Raffle__RaffleNotOpen.selector);
+        raffle.enterRaffle{value: entranceFee}();        
     }
 }
