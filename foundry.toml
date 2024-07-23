@@ -5,8 +5,9 @@ out = "out"
 libs = ["lib"]
 
 remappings = [
-    "@openzeppelin/contracts-upgradeable=lib/openzeppelin-contracts-upgradeable/",
-    "@openzeppelin/=lib/openzeppelin-contracts/",
+    "@chainlink/contracts/=lib/chainlink-brownie-contracts/contracts/",
+    "@dev/=lib/chainlink-brownie-contracts/contracts/src/v0.8/vrf/dev/",
+    "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/",
     "@solmate=lib/solmate/src"
 ]
 

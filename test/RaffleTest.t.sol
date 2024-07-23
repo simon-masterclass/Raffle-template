@@ -89,12 +89,15 @@ contract RaffleTest is Test {
         // ARRANGE
         // Setup: Next transaction will be from the player's address
         vm.prank(PLAYER);
+
         // ACT
-        // Execute: Enter the raffle
+        // Execute: PLAYER Enters the raffle
         raffle.enterRaffle{value: entranceFee}();
+
         // ASSERT
         // Verify: The player is recorded in the raffle contract
-        address playerRecorded = raffle.getPlayer(0);
+        uint256 playerCount = raffle.getPlayerCount();
+        address playerRecorded = raffle.getPlayer(playerCount - 1);
         assert(playerRecorded == PLAYER);
     }
 
@@ -136,6 +139,7 @@ contract RaffleTest is Test {
         vm.roll(block.number + 1);
 
         // ACT
+        // Execute: Trigger the Raffle to Use VRF to pick a winner and transfer funds
         raffle.performUpkeep("");
 
         // ASSERT
@@ -147,5 +151,61 @@ contract RaffleTest is Test {
         vm.prank(PLAYER);
         vm.expectRevert(Raffle.Raffle__RaffleNotOpen.selector);
         raffle.enterRaffle{value: entranceFee}();        
+    }
+
+    /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
+                            CHECK UPKEEP TESTS
+     *|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
+    
+    function test_CheckUpkeepReturnsFalseIfItHasNoBalance() public {
+        // ARRANGE
+        // Setup: Move time + block number forward to when the raffle is calculating
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+
+        // ACT
+        // Execute: Check if upkeep is needed
+        (bool upKeepNeeded,) = raffle.checkUpkeep("");
+
+        // ASSERT
+        // Verify: Expect upkeep to not be needed
+        assert(upKeepNeeded == false);
+    }
+
+    function test_CheckUpkeepReturnsFalseIfRaffleIsntOpen() public {
+        // ARRANGE
+        // Setup: Next transaction will be from the player's address
+        vm.prank(PLAYER);
+        // Setup: Player enters the raffle
+        raffle.enterRaffle{value: entranceFee}();
+        // Setup: Move time + block number forward to when the raffle is calculating
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+        
+        // ACT
+        // Execute: Trigger the Raffle to Use VRF to pick a winner, transfer funds and resets the raffle
+        raffle.performUpkeep("");
+        // Execute: Check if upkeep is needed
+        (bool upKeepNeeded,) = raffle.checkUpkeep("");
+
+        // ASSERT
+        // Verify: Expect upkeep to not be needed
+        assert(upKeepNeeded == false);
+    }
+
+    function test_CheckUpkeepReturnsFalseWhenRaffleIsNotReady() public {
+        // ARRANGE
+        // Setup: Next transaction will be from the player's address
+        vm.prank(PLAYER);
+        // Setup: Player enters the raffle
+        raffle.enterRaffle{value: entranceFee}();
+
+        // ACT
+        // Execute: Check if upkeep is needed
+        (bool upKeepNeeded,) = raffle.checkUpkeep("");
+
+        // ASSERT
+        // Verify: Expect upkeep to not be needed
+        assert(upKeepNeeded == false);
     }
 }
