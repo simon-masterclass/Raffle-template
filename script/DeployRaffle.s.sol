@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+pragma solidity ^0.8.19;
 
 /**
  * @title Deploy Raffle Contract Script
@@ -23,6 +23,13 @@ contract DeployRaffle is Script {
     }
 
     function deployContract() public returns (Raffle, HelperConfig) {
+        // Display sender account
+        console2.log("");
+        console2.log("#######################################");
+        console2.log("Deploying Raffle contract using Account:", tx.origin);  
+        console2.log("#######################################");
+        console2.log("");
+
         HelperConfig helperConfig = new HelperConfig();
         // If local chain => Get or set the local network config
         // If Fuji Avax chain => Get the Fuji Avax network config

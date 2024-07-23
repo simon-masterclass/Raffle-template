@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+pragma solidity ^0.8.19;
 
 /**
  * @title Raffle Contract Tests
@@ -142,7 +142,7 @@ contract RaffleTest is Test {
         // EXTRA TEST: Ensure the state of the raffle is calculating
         Raffle.RaffleState raffleState = raffle.getRaffleState(); 
         assert(raffleState == Raffle.RaffleState.CALCULATING); 
-        
+
         // Execute + Verify: Expect Revert when player tries to enter the raffle
         vm.prank(PLAYER);
         vm.expectRevert(Raffle.Raffle__RaffleNotOpen.selector);
