@@ -71,10 +71,10 @@ contract Raffle is VRFConsumerBaseV2Plus {
         _;
     }
 
-   /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
+    /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
                            CONSTRUCTOR
     *|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
-   
+
     constructor(
         uint256 entranceFee_,
         uint256 interval_,
@@ -108,7 +108,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     receive() external payable {
         // If someone sends ETH to the contract, check if they sent enough to enter the raffle, if so, enter them.
-        if(msg.value > i_entranceFee) {
+        if (msg.value > i_entranceFee) {
             this.enterRaffle();
         } else {
             // // If not enough ETH sent, revert the transaction
@@ -123,7 +123,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
                             EXTERNAL FUNCTIONS
      *|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
-    
+
     function enterRaffle() external payable {
         // require(msg.value >= i_entranceFee, "Raffle: Not enough ETH sent to enter.");
         if (msg.value < i_entranceFee) {
@@ -197,7 +197,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     }
 
     /* Chainlink Random Number Callback Override Function */
-    function fulfillRandomWords(uint256 /* requestId */, uint256[] calldata randomWords) internal override {
+    function fulfillRandomWords(uint256, /* requestId */ uint256[] calldata randomWords) internal override {
         // s_randomWords = randomWords;
         // Pick winner based on random number
         uint256 indexOfWinner = randomWords[0] % s_players.length;

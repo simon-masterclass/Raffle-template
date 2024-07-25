@@ -15,10 +15,13 @@ import {LinkToken} from "test/mocks/LinkToken.sol";
 
 abstract contract CodeConstants {
     // VRF Mock Values - Don't really matter for the Mock
-    uint96 public MOCK_BASE_FEE =  250000000000000000;          // 0.25 ether;
-    uint96 public MOCK_GAS_PRICE_LINK = 1000000000;             // 10;
+    uint96 public MOCK_BASE_FEE =  0.00034 ether;          
+    uint96 public MOCK_GAS_PRICE_LINK = 1e9;             
     // LINK / ETH price
-    int256 public MOCK_WEI_PER_UNIT_LINK = 10000000000000000;   // 1e18/100; // 1 Link = 100 Wei
+    int256 public MOCK_WEI_PER_UNIT_LINK = 4e15;
+    // Enable / Disable console logs for testing
+    bool public constant ENABLE_CONSOLE_LOGS_TF = false;
+    bool public constant SPECIAL_LOGS_TF = true;   
 
     // Owner of the contract when deploying to forks or testnets - TBD
     address public OWNER_DEPLOYER = tx.origin;
@@ -28,6 +31,7 @@ abstract contract CodeConstants {
 
     uint256 public constant LOCAL_CHAINID = 31337;
     uint256 public constant AVAX_FUJI_CHAINID = 43113;
+    uint256 public constant SEPOLIA_ETH_CHAINID = 11155111;
 }
 
 contract HelperConfig is Script, CodeConstants {
@@ -50,6 +54,7 @@ contract HelperConfig is Script, CodeConstants {
 
     constructor() {
         networkConfigs[AVAX_FUJI_CHAINID] = getFujiAvaxNetworkConfig();
+        networkConfigs[SEPOLIA_ETH_CHAINID] = getSepoliaEthConfig();
     }
 
     function getConfig() public returns (NetworkConfig memory) {
@@ -77,7 +82,6 @@ contract HelperConfig is Script, CodeConstants {
         uint256 FUND_AMOUNT = 34 ether; 
         // subId = subscriptionId = 0, unless the createSubscription function is called in broadcast above
         uint256 subId = 0; 
-        
          
         //Deploy Mocks, setup local network config, etc...
         vm.startBroadcast(FOUNDRY_RED_TEAM_TESTER);
@@ -90,25 +94,26 @@ contract HelperConfig is Script, CodeConstants {
                 // VRFCoordinatorV2_5Mock(vrfCoordinatorMock).fundSubscription(subId, FUND_AMOUNT); //Extra
         vm.stopBroadcast();
 
-        console2.log("");
-        console2.log("#######################################");
-        console2.log("You have deployed a MOCK VRF contract!");  
-        console2.log("#######################################");
-        console2.log("Make sure this was intentional!");        
-        // console2.log("");
-
-        uint256 balanceRed = linkToken.balanceOf(FOUNDRY_RED_TEAM_TESTER);
-        uint256 balanceBlue = linkToken.balanceOf(FOUNDRY_BLUE_TEAM_TESTER);
-        
-        console2.log("");
-        console2.log("--------------------------------------------");
-        console2.log("Foundry RED Team Account (tx.origin): ", FOUNDRY_RED_TEAM_TESTER);
-        console2.log("Mock Link Balance of RED Team: ", balanceRed);
-        console2.log("--------------------------------------------");
-        console2.log("Foundry BLUE Team Account (9): ", FOUNDRY_BLUE_TEAM_TESTER);
-        console2.log("Mock Link Balance of BLUE Team: ", balanceBlue);
-        console2.log("--------------------------------------------");
-        // console2.log("");
+        if (ENABLE_CONSOLE_LOGS_TF) {
+            console2.log("");
+            console2.log("#######################################");
+            console2.log("You have deployed a MOCK VRF contract!");  
+            console2.log("#######################################");
+            console2.log("Make sure this was intentional!");        
+            // console2.log("");
+       
+            uint256 balanceRed = linkToken.balanceOf(FOUNDRY_RED_TEAM_TESTER);
+            uint256 balanceBlue = linkToken.balanceOf(FOUNDRY_BLUE_TEAM_TESTER);
+            console2.log("");
+            console2.log("--------------------------------------------");
+            console2.log("Foundry RED Team Account (tx.origin): ", FOUNDRY_RED_TEAM_TESTER);
+            console2.log("Mock Link Balance of RED Team: ", balanceRed);
+            console2.log("--------------------------------------------");
+            console2.log("Foundry BLUE Team Account (9): ", FOUNDRY_BLUE_TEAM_TESTER);
+            console2.log("Mock Link Balance of BLUE Team: ", balanceBlue);
+            console2.log("--------------------------------------------");
+            // console2.log("");
+        }
 
         // Set local network config
         localNetworkConfig = NetworkConfig({
@@ -141,4 +146,19 @@ contract HelperConfig is Script, CodeConstants {
             owner: OWNER_DEPLOYER // TBD
         });
     }
+
+    function getSepoliaEthConfig() public pure returns (NetworkConfig memory sepoliaNetworkConfig) {
+        sepoliaNetworkConfig = NetworkConfig({
+            entranceFee: 1 ether,
+            interval: 30, // 30 seconds
+            nativePayment: false,
+            callbackGasLimit: 500000, // 500,000 gas
+            linkTokenAddress: 0x779877A7B0D9E8603169DdbD7836e478b4624789,
+            keyHash4GasLane: 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae,
+            vrfCoordinator: 0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B,
+            subscriptionId: 0, // If left as 0, our scripts will create one!
+            owner: 0x643315C9Be056cDEA171F4e7b2222a4ddaB9F88D
+        });
+    }
+
 }
