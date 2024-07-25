@@ -60,6 +60,12 @@ contract DeployRaffle is Script {
         );
         vm.stopBroadcast();
 
+        console2.log("");
+        console2.log("#######################################");
+        console2.log("Raffle contract address:", address(raffle));  
+        console2.log("#######################################");
+        console2.log("");
+
         // Add Raffle contract as a consumer
         AddConsumer addConsumer = new AddConsumer();
         // addConsumer.run();

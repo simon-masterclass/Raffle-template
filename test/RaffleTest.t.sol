@@ -5,6 +5,7 @@ pragma solidity ^0.8.19;
  * @title Raffle Contract Tests
  * @author c0 | X: @c0mmanderZero
  * @notice This contract tests the Raffle contract and its functions, including interactions with Chainlink VRF
+ * @notice The tests use the ARRANGE, ACT, ASSERT pattern
  * @dev This contract is configure to test on a local chain, Arbitrum and on the Avalanche Fuji Testnet
  */
 
@@ -13,6 +14,7 @@ import {DeployRaffle} from "script/DeployRaffle.s.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
 import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/Script.sol";
+import {Vm} from "forge-std/Vm.sol";
 // temporary import for testing
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
@@ -22,6 +24,7 @@ contract RaffleTest is Test {
     // Contracts - Raffle and HelperConfig
     Raffle public raffle;
     HelperConfig public helperConfig;
+    // Console log for debugging - console2.log("message", variable) 
     using console2 for *;
 
     // Test Player
@@ -37,10 +40,21 @@ contract RaffleTest is Test {
     bytes32 public keyHash4GasLane;
     uint256 public subscriptionId;
     address public vrfCoordinator;
+    address public owner;
 
     /* Events */
     event RaffleEntered(address indexed player);
     event RaffleWinnerPicked(address indexed winner, uint256 winnings);
+
+    /* Modifiers */
+    modifier playerEnteredRaffle {
+        // ARRANGE
+        // Setup: Next transaction will be from the player's address
+        vm.prank(PLAYER);
+        // Setup: Player enters the raffle
+        raffle.enterRaffle{value: entranceFee}();
+        _;
+    }
 
     /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
                         TEST INITIALIZATION SETUP
@@ -64,9 +78,25 @@ contract RaffleTest is Test {
         keyHash4GasLane = config.keyHash4GasLane;
         subscriptionId = config.subscriptionId;
         vrfCoordinator = config.vrfCoordinator;
+        owner = config.owner;
+
+        // Setup: Fund the Raffle Contract with funds to pay the winner - 0.69 ether 
+        // Note that sending more than 1 ether will enter the sender into the lottery instead of providing funds for transactions
+        // vm.deal(address(raffle), 0.69 ether);
+        // vm.deal(owner, STARTING_PLAYER_BALANCE);
+
+        (bool success, ) = payable(raffle).call{value: 0.69 ether}("");
+        require(success, "Failed to send funds to Raffle contract");
 
         // Setup: Fund player with STARTING_PLAYER_BALANCE = 10 ether; (for testing - subject to change)
         vm.deal(PLAYER, STARTING_PLAYER_BALANCE);
+    }
+
+    /** TEST: Ensure the Raffle has and initial balance **/
+    function test_InitialRaffleBalance() public view {
+        // ASSERT
+        // Verify: The Raffle contract has a balance of 0.69 ether
+        assert(address(raffle).balance == 0.69 ether);
     }
 
     /** TEST: Raffle state enum should Initialize In Open State */
@@ -130,10 +160,8 @@ contract RaffleTest is Test {
     }
 
     /** TEST: Contract should Not Allow Players To Enter Raffle When it Is in Calculating state **/
-    function test_DoNotAllowPlayerToEnterWhenRaffleIsCalculating() public {
+    function test_DoNotAllowPlayerToEnterWhenRaffleIsCalculating() public playerEnteredRaffle {
         // ARRANGE
-        vm.prank(PLAYER);
-        raffle.enterRaffle{value: entranceFee}();
         // Setup: Warp time + roll block number forward to when the raffle is ready to pick a winner
         vm.warp(block.timestamp + interval + 1);
         vm.roll(block.number + 1);
@@ -157,11 +185,9 @@ contract RaffleTest is Test {
      *|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
 
     /** TEST: Upkeep Needed should return true When it's Time to Pick a Winner**/
-    function test_UpkeepNeededWhenTimeToPickWinner() public {
+    function test_UpkeepNeededWhenTimeToPickWinner() public playerEnteredRaffle {
         // ARRANGE
-        // Setup: Next transaction will be from the player's address
-        vm.prank(PLAYER);
-        raffle.enterRaffle{value: entranceFee}();
+        // Setup: Note that the player has entered the raffle - playerEnteredRaffle modifier
         // Setup: Move time + block number forward to when the raffle is calculating
         vm.warp(block.timestamp + interval + 1);
         vm.roll(block.number + 1);
@@ -192,12 +218,9 @@ contract RaffleTest is Test {
     }
 
     /** TEST: Check Upkeep should Return False If Raffle Isn't Open **/
-    function test_CheckUpkeepReturnsFalseIfRaffleIsntOpen() public {
+    function test_CheckUpkeepReturnsFalseIfRaffleIsntOpen() public playerEnteredRaffle {
         // ARRANGE
-        // Setup: Next transaction will be from the player's address
-        vm.prank(PLAYER);
-        // Setup: Player enters the raffle
-        raffle.enterRaffle{value: entranceFee}();
+        // Setup: Note that the player has entered the raffle - playerEnteredRaffle modifier
         // Setup: Move time + block number forward to when the raffle is calculating
         vm.warp(block.timestamp + interval + 1);
         vm.roll(block.number + 1);
@@ -214,12 +237,9 @@ contract RaffleTest is Test {
     }
 
     /** TEST: Check Upkeep should Return False When Raffle Isn't Ready **/
-    function test_CheckUpkeepReturnsFalseWhenRaffleIsNotReady() public {
+    function test_CheckUpkeepReturnsFalseWhenRaffleIsNotReady() public playerEnteredRaffle {
         // ARRANGE
-        // Setup: Next transaction will be from the player's address
-        vm.prank(PLAYER);
-        // Setup: Player enters the raffle
-        raffle.enterRaffle{value: entranceFee}();
+        // Setup: Note that the player has entered the raffle - playerEnteredRaffle modifier
 
         // ACT
         // Execute: Check if upkeep is needed
@@ -253,35 +273,11 @@ contract RaffleTest is Test {
     /** TEST: Perform Upkeep Should Revert When Raffle Is Not Ready **/
     function test_PerformUpkeepRevertsWhenRaffleIsNotReady() public {
         // ARRANGE
-        // Setup: Next transaction will be from the player's address
-        vm.prank(PLAYER);
-
-        // ACT + ASSERT
-        // Execute + Verify: Expect Specific Revert when trying to perform upkeep when raffle is not ready
-        vm.expectRevert(); // Raffle.Raffle__UpkeepNotNeeded.selector
-        raffle.performUpkeep("");
-    }
-
-    /** TEST: Perform Upkeep Should Revert With Specific Error When Upkeep Is Not Needed **/
-    function test_PerformUpkeepRevertsWithSpecificErrorIfUpkeepNotNeeded() public {
-        // ARRANGE
         // Setup: Set the current balance and number of players in the raffle
-        uint256 currentBalance = 0;
+        uint256 currentBalance = address(raffle).balance;
         uint256 numPlayers = 0;
         // Setup: Get the current state of the raffle
         Raffle.RaffleState raffleState = raffle.getRaffleState();
-
-
-        // Setup: Next transaction will be from the player's address
-        vm.prank(PLAYER);
-        // Setup: Player enters the raffle
-        raffle.enterRaffle{value: entranceFee}();
-        
-        // Setup: Update the current balance and number of players in the raffle
-        currentBalance = currentBalance + entranceFee ;
-        numPlayers = numPlayers + 1;
-
-
 
         // ACT + ASSERT
         // Execute + Verify: Expect Specific Revert when trying to perform upkeep when upkeep is not needed
@@ -292,12 +288,37 @@ contract RaffleTest is Test {
         raffle.performUpkeep("");
     }
 
-    function test_PerformUpkeepCanOnlyRunIfCheckUpkeepIsTrue() public {
+    /** TEST: Perform Upkeep Should Revert With Specific Error When Upkeep Is Not Needed **/
+    function test_PerformUpkeepRevertsWithSpecificErrorIfUpkeepNotNeeded() public {
         // ARRANGE
+        // Setup: Set the current balance and number of players in the raffle
+        uint256 currentBalance = address(raffle).balance;
+        uint256 numPlayers = 0;
+        // Setup: Get the current state of the raffle
+        Raffle.RaffleState raffleState = raffle.getRaffleState();
+
         // Setup: Next transaction will be from the player's address
         vm.prank(PLAYER);
         // Setup: Player enters the raffle
         raffle.enterRaffle{value: entranceFee}();
+        
+        // Setup: Update the current balance and number of players in the raffle
+        currentBalance = currentBalance + entranceFee ;
+        numPlayers = numPlayers + 1;
+
+        // ACT + ASSERT
+        // Execute + Verify: Expect Specific Revert when trying to perform upkeep when upkeep is not needed
+        vm.expectRevert(
+            abi.encodeWithSelector(Raffle.Raffle__UpkeepNotNeeded.selector, currentBalance, numPlayers, raffleState)
+            );
+        // Execute: Perform Upkeep and expect it to revert    
+        raffle.performUpkeep("");
+    }
+
+    /** TEST: Perform Upkeep Can Only Run If Check Upkeep Is True **/
+    function test_PerformUpkeepCanOnlyRunIfCheckUpkeepIsTrue() public playerEnteredRaffle {
+        // ARRANGE
+        // Setup: Note that the player has entered the raffle - playerEnteredRaffle modifier
         // Setup: Move time + block number forward to when the raffle is calculating
         vm.warp(block.timestamp + interval + 1);
         vm.roll(block.number + 1);
@@ -312,5 +333,95 @@ contract RaffleTest is Test {
         raffle.performUpkeep("");
     }
 
+    /** TEST: Perform Upkeep Updates Raffle State And Emits Request Id **/
+    function test_PerformUpkeepUpdatesRaffleStateAndEmitsRequestId() public playerEnteredRaffle {
+        // ARRANGE
+        // Setup: Note that the player has entered the raffle - playerEnteredRaffle modifier
+        // Setup: Move time + block number forward to when the raffle is ready to pick a winner
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+
+        // ACT
+        // Execute: Prepare to record logs
+        vm.recordLogs();
+        // Execute: Perform upkeep to emit the request id
+        raffle.performUpkeep("");
+        // Execute: Get the recorded logs - 
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        // Execute: Get the requestId from the logs  
+        // Note: the 0th log is the VRF contract events and 1st log is the Raffle contract logs with requestId being in the 1st log (index 0 reserved for VRF events)
+        bytes32 requestId = entries[1].topics[1];
+
+        // ASSERT
+        // Verify: The requestId is emitted
+        assert(uint256(requestId) > 0);
+        // Verify: The raffle state is now calculating
+        Raffle.RaffleState raffleState = raffle.getRaffleState();
+        assert(raffleState == Raffle.RaffleState.CALCULATING);
+    }
     
+    /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
+                        FULFILL RANDOMNESS TESTS
+     *|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
+    
+    /** TEST [FUZZ]: Fulfill Random Words function Can Only Be Called After Perform Upkeep **/
+    function test_FulfillRandomWordsCanonlyBeCalledAfterPerformUpkeep(uint256 randomRequestId) public playerEnteredRaffle {
+        // ARRANGE
+        // Setup: Note that the player has entered the raffle - playerEnteredRaffle modifier
+        // Setup: Nothing is done here - raffle is not ready to pick a winner
+
+        // ACT + ASSERT
+        // Execute + Verify: Expect Specific Revert when trying to fulfillRandomWords before performUpkeep
+        vm.expectRevert(VRFCoordinatorV2_5Mock.InvalidRequest.selector);
+        VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(randomRequestId, address(raffle));
+    }
+
+    function test_FulfillRandomWordsPicksAWinnerResetsAndSendsMoney() public playerEnteredRaffle {
+        // ARRANGE
+        // Setup: Note that the player has entered the raffle - playerEnteredRaffle modifier
+        // Setup: Add another 9 players to the raffle
+        uint256 totalPlayers = 10;
+        uint160 startingIndex = 1;
+        // loop through the total players and add them to the raffle
+        for (uint160 i = startingIndex; i < totalPlayers; i++) {
+            // Setup: Convert the index to an address and fund the player
+            hoax(address(i), STARTING_PLAYER_BALANCE);
+            // Setup: Player enters the raffle
+            raffle.enterRaffle{value: entranceFee}();
+        }
+
+        // Setup: Move time + block number forward to when the raffle is ready to pick a winner
+        uint256 startingTimeStamp = raffle.getLastTimeStamp();
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+
+        // ACT
+        // Execute: Prepare to record logs
+        vm.recordLogs();
+        // Execute: Perform upkeep to emit the request id
+        raffle.performUpkeep("");
+        // Execute: Get the recorded logs - 
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        // Execute: Get the requestId from the logs  
+        // Note: the 0th log is the VRF contract events and 1st log is the Raffle contract logs with requestId being in the 1st log (index 0 reserved for VRF events)
+        bytes32 requestId = entries[1].topics[1];
+        // EXTRA Test to Verify: The raffle state is Calculating
+        Raffle.RaffleState raffleState = raffle.getRaffleState();
+        assert(raffleState == Raffle.RaffleState.CALCULATING);
+        // Execute: Fulfill the random words
+        VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(uint256(requestId), address(raffle));
+
+        // ASSERT
+        // Verify: The raffle state is now open - reset and ready for the next round
+        raffleState = raffle.getRaffleState();
+        assert(raffleState == Raffle.RaffleState.OPEN);
+        // Verify: The raffle has a new timestamp
+        uint256 newTimeStamp = raffle.getLastTimeStamp();
+        assert(newTimeStamp > startingTimeStamp);
+        // Verify: The player has been paid
+        address recentWinner = raffle.getRecentWinner();
+        uint256 winnerBalance = recentWinner.balance;
+        assert(winnerBalance > STARTING_PLAYER_BALANCE);
+        
+    } 
 }

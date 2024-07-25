@@ -30,6 +30,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     /* Constants and Immutable Variables (set in constructor)*/
     uint256 private immutable i_interval;
+    uint256 private immutable i_entranceFee;
     // Misc Chainlink VRF parameters
     uint16 constant REQUEST_CONFIRMATION = 3;
     uint32 constant NUM_WORDS = 1;
@@ -45,7 +46,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     LinkTokenInterface s_LinkToken;
 
     /* State Variables */
-    uint256 private immutable i_entranceFee;
+    uint256 private txFeeBalance;
     address payable[] private s_players;
     uint256 private s_lastRaffleTimestamp;
     address private s_recentWinner;
@@ -59,6 +60,8 @@ contract Raffle is VRFConsumerBaseV2Plus {
     /* Events */
     event RaffleEntered(address indexed player);
     event RaffleWinnerPicked(address indexed winner, uint256 winnings);
+    event RequestRaffleWinner(uint256 indexed requestId);
+    event someOneSentETH(address indexed sender, uint256 value);
 
     /* Modifiers */
     modifier onlyRaffleOwner() {
@@ -103,6 +106,20 @@ contract Raffle is VRFConsumerBaseV2Plus {
         s_subscriptionId = subscriptionId_;
     }
 
+    receive() external payable {
+        // If someone sends ETH to the contract, check if they sent enough to enter the raffle, if so, enter them.
+        if(msg.value > i_entranceFee) {
+            this.enterRaffle();
+        } else {
+            // // If not enough ETH sent, revert the transaction
+            // revert Raffle__SendMoreToEnterRaffle();
+            // Add to transaction fee balance
+            txFeeBalance += msg.value;
+        }
+        // Emit event documenting who sent ETH sent to contract and how much
+        emit someOneSentETH(msg.sender, msg.value);
+    }
+
     /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
                             EXTERNAL FUNCTIONS
      *|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
@@ -139,7 +156,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     {
         bool timeHasPassed = ((block.timestamp - s_lastRaffleTimestamp) >= i_interval);
         bool isOpen = s_raffleState == RaffleState.OPEN;
-        bool hasBalance = address(this).balance > 0;
+        bool hasBalance = (address(this).balance - txFeeBalance) > 0;
         bool hasPlayers = s_players.length > 0;
 
         bool upKeepNeeded = timeHasPassed && isOpen && hasBalance && hasPlayers;
@@ -151,7 +168,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         // 2. Pick winner based on random number (automatically done by Chainlink VRF)
         // 3. Transfer winnings to winner and reset raffle
 
-        console2.log("Raffle State before: ", uint(s_raffleState));
+        // console2.log("Raffle State before: ", uint256(s_raffleState));
 
         (bool upKeepNeeded,) = checkUpkeep("");
         if (!upKeepNeeded) {
@@ -161,7 +178,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         // Close the raffle to prevent more entries
         s_raffleState = RaffleState.CALCULATING;
 
-        console2.log("Raffle State after: ", uint(s_raffleState));
+        // console2.log("Raffle State after: ", uint(s_raffleState));
 
         // Request random number from Chainlink VRF
         VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient.RandomWordsRequest({
@@ -176,11 +193,11 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
         uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
 
-        console2.log("Request Id: ",requestId);
+        emit RequestRaffleWinner(requestId);
     }
 
     /* Chainlink Random Number Callback Override Function */
-    function fulfillRandomWords(uint256, /* requestId */ uint256[] calldata randomWords) internal override {
+    function fulfillRandomWords(uint256 /* requestId */, uint256[] calldata randomWords) internal override {
         // s_randomWords = randomWords;
         // Pick winner based on random number
         uint256 indexOfWinner = randomWords[0] % s_players.length;
@@ -191,16 +208,16 @@ contract Raffle is VRFConsumerBaseV2Plus {
         s_players = new address payable[](0);
         s_lastRaffleTimestamp = block.timestamp;
 
-        uint256 winnings = address(this).balance;
+        // Calculate winnings and emit event
+        uint256 winnings = (address(this).balance - txFeeBalance);
+        // Emit event - winner picked!
         emit RaffleWinnerPicked(s_recentWinner, winnings);
 
         // Transfer winnings to winner and reset raffle
-        (bool success,) = s_recentWinner.call{value: winnings}("");
+        (bool success,) = payable(s_recentWinner).call{value: winnings}("");
         if (!success) {
             revert Raffle__TransferToWinnerFailed();
         }
-
-        // Emit event - winner picked!
     }
 
     // Chainlink maintenance fuction: Assumes this contract owns link.
@@ -252,5 +269,13 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     function getPlayerCount() public view returns (uint256) {
         return s_players.length;
+    }
+
+    function getLastTimeStamp() public view returns (uint256) {
+        return s_lastRaffleTimestamp;
+    }
+
+    function getRecentWinner() public view returns (address) {
+        return s_recentWinner;
     }
 }

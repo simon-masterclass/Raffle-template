@@ -15,10 +15,10 @@ import {LinkToken} from "test/mocks/LinkToken.sol";
 
 abstract contract CodeConstants {
     // VRF Mock Values - Don't really matter for the Mock
-    uint96 public MOCK_BASE_FEE =  250000000000000000;           // 0.25 ether;
-    uint96 public MOCK_GAS_PRICE_LINK = 1000000000;         // 10;
+    uint96 public MOCK_BASE_FEE =  250000000000000000;          // 0.25 ether;
+    uint96 public MOCK_GAS_PRICE_LINK = 1000000000;             // 10;
     // LINK / ETH price
-    int256 public MOCK_WEI_PER_UNIT_LINK = 10000000000000000;       // 1e18/100; // 1 Link = 100 Wei
+    int256 public MOCK_WEI_PER_UNIT_LINK = 10000000000000000;   // 1e18/100; // 1 Link = 100 Wei
 
     // Owner of the contract when deploying to forks or testnets - TBD
     address public OWNER_DEPLOYER = tx.origin;
@@ -90,11 +90,16 @@ contract HelperConfig is Script, CodeConstants {
                 // VRFCoordinatorV2_5Mock(vrfCoordinatorMock).fundSubscription(subId, FUND_AMOUNT); //Extra
         vm.stopBroadcast();
 
-        console2.log("You have deployed a VRF mock conract!");
+        console2.log("");
+        console2.log("#######################################");
+        console2.log("You have deployed a MOCK VRF contract!");  
+        console2.log("#######################################");
         console2.log("Make sure this was intentional!");        
+        // console2.log("");
 
         uint256 balanceRed = linkToken.balanceOf(FOUNDRY_RED_TEAM_TESTER);
         uint256 balanceBlue = linkToken.balanceOf(FOUNDRY_BLUE_TEAM_TESTER);
+        
         console2.log("");
         console2.log("--------------------------------------------");
         console2.log("Foundry RED Team Account (tx.origin): ", FOUNDRY_RED_TEAM_TESTER);
@@ -103,11 +108,11 @@ contract HelperConfig is Script, CodeConstants {
         console2.log("Foundry BLUE Team Account (9): ", FOUNDRY_BLUE_TEAM_TESTER);
         console2.log("Mock Link Balance of BLUE Team: ", balanceBlue);
         console2.log("--------------------------------------------");
-        console2.log("");
+        // console2.log("");
 
         // Set local network config
         localNetworkConfig = NetworkConfig({
-            entranceFee: 100, // 10^18 wei (units only)
+            entranceFee: 1 ether, // 10^18 wei (units only)
             interval: 30, // 30 seconds
             nativePayment: false,
             callbackGasLimit: 500000,
@@ -125,7 +130,7 @@ contract HelperConfig is Script, CodeConstants {
 
     function getFujiAvaxNetworkConfig() public view returns (NetworkConfig memory) {
         return NetworkConfig({
-            entranceFee: 100, // 1 AVAX or 10^18 wei (units only)
+            entranceFee: 1 ether, // 1 AVAX or 10^18 wei (units only)
             interval: 30, // 30 seconds
             nativePayment: false,
             callbackGasLimit: 500000,
