@@ -1,0 +1,61 @@
+Compiling 54 files with Solc 0.8.19
+Solc 0.8.19 finished in 5.34s
+Compiler run successful!
+Analysing contracts...
+Running tests...
+
+Ran 19 tests for test/RaffleTest.t.sol:RaffleTest
+[PASS] test_CheckUpkeepReturnsFalseIfEnoughTimeHasPassedWithNoRaffleEntries() (gas: 23243)
+[PASS] test_CheckUpkeepReturnsFalseIfItHasNoBalance() (gas: 23244)
+[PASS] test_CheckUpkeepReturnsFalseIfRaffleIsntOpen() (gas: 230825)
+[PASS] test_CheckUpkeepReturnsFalseWhenRaffleIsNotReady() (gas: 75617)
+[PASS] test_DoNotAllowPlayerToEnterWhenRaffleIsCalculating() (gas: 236840)
+[PASS] test_EnteringRaffleEmitsEvent() (gas: 69658)
+[PASS] test_FulfillRandomWordsCanonlyBeCalledAfterPerformUpkeep(uint256) (runs: 234, μ: 78768, ~: 78768)
+[PASS] test_FulfillRandomWordsPicksAWinnerResetsAndSendsMoney() (gas: 493364)
+[PASS] test_InitialRaffleBalance() (gas: 5020)
+[PASS] test_OnlyLinkTokenTopperCanTopUpSubscription() (gas: 13635)
+[PASS] test_PerformUpkeepCanOnlyRunIfCheckUpkeepIsTrue() (gas: 230161)
+[PASS] test_PerformUpkeepRevertsWhenRaffleIsNotReady() (gas: 21549)
+[PASS] test_PerformUpkeepRevertsWithSpecificErrorIfUpkeepNotNeeded() (gas: 78065)
+[PASS] test_PerformUpkeepUpdatesRaffleStateAndEmitsRequestId() (gas: 235563)
+[PASS] test_RaffleInitializesInOpenState() (gas: 8107)
+[PASS] test_RaffleRecordsPlayersWhenTheyEnter() (gas: 70635)
+[PASS] test_RaffleRevertsWhenPlayerDoesNotSendEnoughToEnter() (gas: 20188)
+[PASS] test_UpkeepNeededWhenTimeToPickWinner() (gas: 79254)
+[PASS] test_theLinkTokenTopperCanTopUpSubscription() (gas: 260)
+Suite result: ok. 19 passed; 0 failed; 0 skipped; finished in 49.27ms (61.89ms CPU time)
+
+Ran 1 test suite in 152.73ms (49.27ms CPU time): 19 tests passed, 0 failed, 0 skipped (19 total tests)
+
+Uncovered for src/Raffle.sol:
+- Branch (branch: 0, path: 1) (location: source ID 50, line 66, chars 2560-2668, hits: 0)
+- Function "" (location: source ID 50, line 76, chars 2869-3975, hits: 0)
+- Line (location: source ID 50, line 88, chars 3257-3285, hits: 0)
+- Statement (location: source ID 50, line 88, chars 3257-3285, hits: 0)
+- Line (location: source ID 50, line 90, chars 3357-3379, hits: 0)
+- Statement (location: source ID 50, line 90, chars 3357-3379, hits: 0)
+- Line (location: source ID 50, line 92, chars 3491-3523, hits: 0)
+- Statement (location: source ID 50, line 92, chars 3491-3523, hits: 0)
+- Line (location: source ID 50, line 93, chars 3533-3571, hits: 0)
+- Statement (location: source ID 50, line 93, chars 3533-3571, hits: 0)
+- Line (location: source ID 50, line 94, chars 3581-3607, hits: 0)
+- Statement (location: source ID 50, line 94, chars 3581-3607, hits: 0)
+- Line (location: source ID 50, line 96, chars 3618-3668, hits: 0)
+- Statement (location: source ID 50, line 96, chars 3618-3668, hits: 0)
+- Line (location: source ID 50, line 97, chars 3678-3714, hits: 0)
+- Statement (location: source ID 50, line 97, chars 3678-3714, hits: 0)
+- Line (location: source ID 50, line 100, chars 3775-3814, hits: 0)
+- Statement (location: source ID 50, line 100, chars 3775-3814, hits: 0)
+- Line (location: source ID 50, line 101, chars 3824-3856, hits: 0)
+- Statement (location: source ID 50, line 101, chars 3824-3856, hits: 0)
+- Line (location: source ID 50, line 104, chars 3934-3968, hits: 0)
+- Statement (location: source ID 50, line 104, chars 3934-3968, hits: 0)
+- Line (location: source ID 50, line 213, chars 8517-8556, hits: 0)
+- Statement (location: source ID 50, line 213, chars 8517-8556, hits: 0)
+- Line (location: source ID 50, line 220, chars 8765-8857, hits: 0)
+- Statement (location: source ID 50, line 220, chars 8765-8857, hits: 0)
+- Function "getEntranceFee" (location: source ID 50, line 227, chars 9055-9148, hits: 0)
+- Line (location: source ID 50, line 228, chars 9121-9141, hits: 0)
+- Statement (location: source ID 50, line 228, chars 9121-9141, hits: 0)
+

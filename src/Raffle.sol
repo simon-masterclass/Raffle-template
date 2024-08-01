@@ -53,7 +53,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     // Storage parameters
     uint256[] public s_randomWords;
     uint256 public s_subscriptionId;
-    address private s_owner;
+    address private s_linkTopper;
 
     /* Events */
     event RaffleEntered(address indexed player);
@@ -62,8 +62,8 @@ contract Raffle is VRFConsumerBaseV2Plus {
     event someOneSentETH(address indexed sender, uint256 value);
 
     /* Modifiers */
-    modifier onlyRaffleOwner() {
-        if (msg.sender != s_owner) {
+    modifier onlyRaffleTopper() {
+        if (msg.sender != s_linkTopper) {
             revert Raffle__onlyRaffleOwnerCanCallThisFunction();
         }
         _;
@@ -78,7 +78,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         uint256 interval_,
         bool nativePayment_,
         uint32 callbackGasLimit_,
-        address owner_,
+        address linkTopper_,
         address linkTokenAddress,
         bytes32 keyHash4GasLane_,
         uint256 subscriptionId_,
@@ -91,7 +91,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         // if Native Payments is true, VRF services are paid in native currency instead of Link token
         i_nativePayment = nativePayment_;
         i_callbackGasLimit = callbackGasLimit_;
-        s_owner = owner_;
+        s_linkTopper = linkTopper_;
 
         s_LinkToken = LinkTokenInterface(linkTokenAddress);
         i_keyHash4GasLane = keyHash4GasLane_;
@@ -216,7 +216,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     // Chainlink maintenance fuction: Assumes this contract owns link.
     // 1000000000000000000 = 1 LINK
-    function topUpSubscription(uint256 amount) external onlyRaffleOwner {
+    function topUpSubscription(uint256 amount) external onlyRaffleTopper {
         s_LinkToken.transferAndCall(address(s_vrfCoordinator), amount, abi.encode(s_subscriptionId));
     }
 

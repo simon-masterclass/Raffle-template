@@ -35,7 +35,7 @@ abstract contract CodeConstants {
     uint256 public constant SEPOLIA_ETH_CHAINID = 11155111;
 
     // Enable / Disable console logs for testing
-    bool public constant ENABLE_CONSOLE_LOGS_TF = false;
+    bool public constant ENABLE_CONSOLE_LOGS_TF = true;
     bool public constant SPECIAL_LOGS_TF = true;   
 }
 
@@ -86,7 +86,7 @@ contract HelperConfig is Script, CodeConstants {
         }
 
         //34 Link
-        uint256 FUND_AMOUNT = 34 ether; 
+        // uint256 FUND_AMOUNT = 34 ether; 
         // subId = subscriptionId = 0, unless the createSubscription function is called in broadcast above
         uint256 subId = 0; 
          
@@ -96,7 +96,7 @@ contract HelperConfig is Script, CodeConstants {
             VRFCoordinatorV2_5Mock vrfCoordinatorMock =
                 new VRFCoordinatorV2_5Mock(MOCK_BASE_FEE, MOCK_GAS_PRICE_LINK, MOCK_WEI_PER_UNIT_LINK);
                 LinkToken linkToken = new LinkToken();
-                linkToken.transfer(FOUNDRY_BLUE_TEAM_TESTER, FUND_AMOUNT); //Extra - transfer 34 Link to the owner
+                // linkToken.transfer(FOUNDRY_BLUE_TEAM_TESTER, FUND_AMOUNT); //Extra - transfer 34 Link to the owner
                 // subId = vrfCoordinatorMock.createSubscription();
                 // VRFCoordinatorV2_5Mock(vrfCoordinatorMock).fundSubscription(subId, FUND_AMOUNT); //Extra
         vm.stopBroadcast();
@@ -187,7 +187,7 @@ contract HelperConfig is Script, CodeConstants {
             entranceFee: 1 ether,
             interval: 30, // 30 seconds
             nativePayment: false,
-            callbackGasLimit: 500000, // 500,000 gas
+            callbackGasLimit: 500000*10, // 500,000 gas
             linkTokenAddress: 0xb1D4538B4571d411F07960EF2838Ce337FE1E80E,
             keyHash4GasLane: 0x1770bdc7eec7771f7ba4ffd640f34260d7f095b79c92d34a5b2551d6f6cfd2be, // 50 gwei Key Hash - Only option for Arbitrum Sepolia
             vrfCoordinator: 0x5CE8D5A2BC84beb22a398CCA51996F7930313D61,

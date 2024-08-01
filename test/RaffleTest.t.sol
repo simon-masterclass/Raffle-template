@@ -16,10 +16,11 @@ import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/Script.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {CodeConstants} from "script/HelperConfig.s.sol";
-// temporary import for testing
+// special imports for testing
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
+import {LinkToken} from "test/mocks/LinkToken.sol";
 
 contract RaffleTest is Test, CodeConstants {
     // Contracts - Raffle and HelperConfig
@@ -173,6 +174,7 @@ contract RaffleTest is Test, CodeConstants {
 
     /**
      * TEST: Contract should Not Allow Players To Enter Raffle When it Is in Calculating state *
+     * Note: This test will fail on the Arbitrum Sepolia chain
      */
     function test_DoNotAllowPlayerToEnterWhenRaffleIsCalculating() public playerEnteredRaffle {
         // ARRANGE
@@ -236,7 +238,8 @@ contract RaffleTest is Test, CodeConstants {
     }
 
     /**
-     * TEST: Check Upkeep should Return False If Raffle Isn't Open *
+     * TEST: Check Upkeep should Return False If Raffle Isn't Open * ARB-SEPOLIA FAILS
+     * Note: This test will fail on the Arbitrum Sepolia chain
      */
     function test_CheckUpkeepReturnsFalseIfRaffleIsntOpen() public playerEnteredRaffle {
         // ARRANGE
@@ -345,6 +348,7 @@ contract RaffleTest is Test, CodeConstants {
 
     /**
      * TEST: Perform Upkeep Can Only Run If Check Upkeep Is True *
+     * Note: This test will fail on the Arbitrum Sepolia chain
      */
     function test_PerformUpkeepCanOnlyRunIfCheckUpkeepIsTrue() public playerEnteredRaffle {
         // ARRANGE
@@ -365,13 +369,14 @@ contract RaffleTest is Test, CodeConstants {
 
     /**
      * TEST: Perform Upkeep Updates Raffle State And Emits Request Id *
+     * Note: This test will fail on the Arbitrum Sepolia chain
      */
     function test_PerformUpkeepUpdatesRaffleStateAndEmitsRequestId() public playerEnteredRaffle {
         // ARRANGE
         // Setup: Note that the player has entered the raffle - playerEnteredRaffle modifier
         // Setup: Move time + block number forward to when the raffle is ready to pick a winner
         vm.warp(block.timestamp + interval + 1);
-        vm.roll(block.number + 4);
+        vm.roll(block.number + 4);  
 
         // ACT
         // Execute: Prepare to record logs
@@ -474,4 +479,66 @@ contract RaffleTest is Test, CodeConstants {
         uint256 winnerBalance = recentWinner.balance;
         assert(winnerBalance > STARTING_PLAYER_BALANCE);
     }
+
+    /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
+                            LINK TOKEN FUNCTIONS
+     *|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
+
+     modifier notOnAnvil() {
+         if (block.chainid == LOCAL_CHAINID) {
+             return;
+         }
+         _;
+     }
+
+     function test_OnlyLinkTokenTopperCanTopUpSubscription() public {
+         // ARRANGE
+         // Setup: Next transaction will be from the player's address
+         vm.prank(PLAYER);
+         uint256 linkTokenAmount = 1 ether;
+
+         // ACT + ASSERT
+         // Execute + Verify: Expect Specific Revert when player tries to top up the subscription
+         vm.expectRevert();
+         // Execute: Player tries to top up the subscription
+         raffle.topUpSubscription(linkTokenAmount);
+     }
+
+     function test_theLinkTokenTopperCanTopUpSubscription() public notOnAnvil {
+         // ARRANGE
+         // Setup: Link token amount to top up the subscription
+         uint256 linkTokenAmount = 1 ether;
+         // Setup: Transfer Link tokens to the Raffle contract and the owner
+         vm.startBroadcast();
+         LinkToken(linkTokenAddress).transfer(address(raffle), linkTokenAmount); 
+        //  LinkToken(linkTokenAddress).transfer(owner, linkTokenAmount); 
+         vm.stopBroadcast();
+        // Setup: Get the owner's balance before and after the top up
+         uint256 balanceBefore = LinkToken(linkTokenAddress).balanceOf(address(raffle));
+         uint256 balanceTopper = LinkToken(linkTokenAddress).balanceOf(owner);
+
+         // ACT + ASSERT
+         // Execute + Verify: Expect Specific Revert when player tries to top up the subscription
+         // Assert: The Raffle Contract's balance has increased by the link token amount
+         assert(balanceBefore == linkTokenAmount); 
+        // Visually check the balances
+         console2.log("Raffle Contract Balance Before: ", balanceBefore);
+         console2.log("Link Topper Balance Before: ", balanceTopper);
+
+         // Setup: Next transaction will be from the owner's address
+         vm.prank(owner);
+         // Execute: Owner/linkTopper calls the Raffle Contract to top up the subscription
+         raffle.topUpSubscription(linkTokenAmount);
+        //  Setup: Next transaction will be from the owner's address
+         vm.prank(owner);
+         // Execute: Get the owner's balance after the top up
+         uint256 balanceAfter = LinkToken(linkTokenAddress).balanceOf(address(raffle));
+         console2.log("Raffle Contract Balance After: ", balanceAfter);
+         // Verify that the Consumer is the Raffle contract & not the owner
+         balanceTopper = LinkToken(linkTokenAddress).balanceOf(owner);
+         console2.log("Link Topper Balance After: ", balanceTopper);
+         // Verify: The owner's balance has decreased by the link token amount
+         assert(balanceAfter == balanceBefore - linkTokenAmount);
+     }
+    
 }
