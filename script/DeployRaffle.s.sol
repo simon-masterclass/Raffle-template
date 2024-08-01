@@ -30,6 +30,8 @@ contract DeployRaffle is Script, CodeConstants {
             console2.log("Deploying Raffle contract using Account:", tx.origin);
             console2.log("#######################################");
             console2.log("");
+            console2.log("Deploying Raffle contract on Chain Id: ", block.chainid);
+            console2.log("");
         }
 
         HelperConfig helperConfig = new HelperConfig();

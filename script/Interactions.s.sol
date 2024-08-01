@@ -27,6 +27,10 @@ contract CreateSubscription is Script, CodeConstants {
         address vrfCoordinator = helperConfig.getConfig().vrfCoordinator;
         address owner = helperConfig.getConfig().owner;
 
+        if (block.chainid == ARBITRUM_SEPOLIA_CHAINID) {
+            owner = OWNER_DEPLOYER_2;
+        }
+
         return createSubscription(vrfCoordinator, owner);
     }
 
@@ -84,9 +88,25 @@ contract FundSubscription is Script, CodeConstants {
                 );
             }
 
-            vm.startBroadcast(owner);
-            LinkToken(linkToken_).transferAndCall(vrfCoordinator_, FUND_AMOUNT, abi.encode(subId_));
-            vm.stopBroadcast();
+            if(block.chainid == ARBITRUM_SEPOLIA_CHAINID)
+            {
+                console2.log("");
+                console2.log("F: CHECK LINK TOKEN BALANCES:");
+                console2.log("F: Address of owner: ", OWNER_DEPLOYER_2);
+                console2.log(
+                    "F: Link Token Balance of Owner Before transferAndCall: ", LinkToken(linkToken_).balanceOf(OWNER_DEPLOYER_2)
+                );
+
+                vm.startBroadcast(OWNER_DEPLOYER_2);
+                LinkToken(linkToken_).transferAndCall(vrfCoordinator_, FUND_AMOUNT, abi.encode(subId_));
+                vm.stopBroadcast();
+                // Check the balance of the owner
+                console2.log("F: Link Token Balance of Owner (After): ", LinkToken(linkToken_).balanceOf(OWNER_DEPLOYER_2));
+            } else {
+                vm.startBroadcast(owner);
+                LinkToken(linkToken_).transferAndCall(vrfCoordinator_, FUND_AMOUNT, abi.encode(subId_));
+                vm.stopBroadcast();
+            }
 
             if (ENABLE_CONSOLE_LOGS_TF)
             console2.log("F: Link Token Balance of Owner (After): ", LinkToken(linkToken_).balanceOf(owner));
@@ -119,6 +139,10 @@ contract AddConsumer is Script, CodeConstants {
         uint256 subscriptionId = helperConfig.getConfig().subscriptionId;
         address vrfCoordinator = helperConfig.getConfig().vrfCoordinator;
         address owner = helperConfig.getConfig().owner;
+        // If Arbitrum Sepolia chain, use OWNER_DEPLOYER_2
+        if (block.chainid == ARBITRUM_SEPOLIA_CHAINID) {
+            owner = OWNER_DEPLOYER_2;
+        }
 
         addConsumer(mostRecentDeployment_, vrfCoordinator, subscriptionId, owner);
     }

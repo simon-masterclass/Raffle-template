@@ -13,7 +13,7 @@ DEFAULT_ANVIL_CHAIN_ID := 1337
 DEFAULT_ZKSYNC_LOCAL_KEY := 0x7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110
 
 # Help
-help:;
+help:
 	@echo "Usage:" 
 	@echo "      make deploy ARGS=\"...\" \n\n     example: make deploy ARGS=\"--network avalanche\""
 	@echo ""
@@ -58,6 +58,10 @@ zk-anvil :; npx zksync-cli dev start
 # 	@forge script script/DeployRaffle.s.sol:DeployRaffle $(NETWORK_ARGS)
 
 # NETWORK_ARGS := --rpc-url http://localhost:8545 --private-key $(DEFAULT_ANVIL_PRIVATE_KEY) --broadcast
+
+
+deploy-anvil: 
+	forge script script/DeployRaffle.s.sol:DeployRaffle --rpc-url http://localhost:8545 --private-key $(DEFAULT_ANVIL_PRIVATE_KEY) --broadcast -vvvv
 
 deployOnAnvil:
 	@forge script script/DeployRaffle.s.sol:DeployRaffle $(NETWORK_ARGS_x)

@@ -8,6 +8,7 @@ pragma solidity ^0.8.19;
  * @notice The tests use the ARRANGE, ACT, ASSERT pattern
  * @dev This contract is configure to test on a local chain, Eth Sepolia, Arbitrum Sepolia and on the Avalanche Fuji Testnet
  */
+
 import {Raffle} from "src/Raffle.sol";
 import {DeployRaffle} from "script/DeployRaffle.s.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
@@ -177,7 +178,7 @@ contract RaffleTest is Test, CodeConstants {
         // ARRANGE
         // Setup: Warp time + roll block number forward to when the raffle is ready to pick a winner
         vm.warp(block.timestamp + interval + 1);
-        vm.roll(block.number + 1);
+        vm.roll(block.number + 4);
 
         // ACT
         // Execute: Trigger Chainlink automated function to Use VRF to pick a winner and transfer funds
@@ -242,7 +243,7 @@ contract RaffleTest is Test, CodeConstants {
         // Setup: Note that the player has entered the raffle - playerEnteredRaffle modifier
         // Setup: Move time + block number forward to when the raffle is calculating
         vm.warp(block.timestamp + interval + 1);
-        vm.roll(block.number + 1);
+        vm.roll(block.number + 4);
 
         // ACT
         // Execute: Trigger the Raffle to Use VRF to pick a winner, transfer funds and resets the raffle
@@ -350,7 +351,7 @@ contract RaffleTest is Test, CodeConstants {
         // Setup: Note that the player has entered the raffle - playerEnteredRaffle modifier
         // Setup: Move time + block number forward to when the raffle is calculating
         vm.warp(block.timestamp + interval + 1);
-        vm.roll(block.number + 1);
+        // vm.roll(block.number + 4);
 
         // ACT + ASSERT
         // Execute: Check if upkeep is needed
@@ -370,7 +371,7 @@ contract RaffleTest is Test, CodeConstants {
         // Setup: Note that the player has entered the raffle - playerEnteredRaffle modifier
         // Setup: Move time + block number forward to when the raffle is ready to pick a winner
         vm.warp(block.timestamp + interval + 1);
-        vm.roll(block.number + 1);
+        vm.roll(block.number + 4);
 
         // ACT
         // Execute: Prepare to record logs
