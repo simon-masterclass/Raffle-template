@@ -154,6 +154,7 @@ contract RaffleTest is Test, CodeConstants {
             console2.log("+[0][0]-SETUP: AFTER-CALL -[0][0]+");
             console2.log("");
             console2.log("+------------------------------+");
+            console2.log("::               Player Address: ", PLAYER);
             console2.log("::           Player Balance ETH: ", PLAYER.balance);
             console2.log("::          Player Balance LINK: ", LinkTokenInterface(linkTokenAddress).balanceOf(address(PLAYER)));
             console2.log("::           Owner Balance LINK: ", LinkTokenInterface(linkTokenAddress).balanceOf(address(owner)));
@@ -213,9 +214,81 @@ contract RaffleTest is Test, CodeConstants {
         assert(playerCount == 1);
         //Should be: (playerCount - 1) = 0 = (1 - 1) = 0 index should return PLAYER address
         address playerRecorded = raffle.getPlayer(playerCount - 1);
-        console2.log("Player recorded: ", playerRecorded);
-        console2.log("Player expected: ", PLAYER);
+        if (TEST_CONSOLE_LOGS_TF) {
+            console2.log("Player recorded: ", playerRecorded);
+            console2.log("Player expected: ", PLAYER);
+        }
+        // Assert the player is recorded in the raffle contract
         assert(playerRecorded == PLAYER);
+    }
+
+    /**
+     * TEST: The Reciever Emits Event When MORE Than Entrance Fee Is Sent to the Raffle Contract without Function Selector *
+     * Note: Player Can Enter Raffle When They Send Enough Funds without Specifying A Function Selector *
+     */
+    function test_ReceiverEmitsEventWhenMoreThanEntranceFeeIsSent() public {
+        // ARRANGE
+        // Setup: Send more than the entrance fee to the raffle contract
+        uint256 amountSent = entranceFee * 2;
+        // ACT
+        // Execute: Prepare to record logs
+        vm.recordLogs();
+        // Execute: Player enters the raffle
+        vm.startPrank(PLAYER);
+        (bool success,) = payable(raffle).call{value: amountSent}("");
+        require(success, "Failed to send funds to Raffle contract");
+        vm.stopPrank();
+        // Execute: Get the recorded logs -
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        // Note: the 0th log is the VRF contract events and 1st log is the Raffle contract logs with requestId being in the 1st log (index 0 reserved for VRF events)
+        bytes32 playerInLogBytes = entries[1].topics[1];
+        address playerInLogAddress = address(uint160(uint256(playerInLogBytes)));
+
+        // ASSERT
+        // Verify: The player is recorded in the raffle contract
+        address playerRecorded = raffle.getPlayer(raffle.getPlayerCount() - 1);
+        if (TEST_CONSOLE_LOGS_TF) {
+            console2.log("Player recorded in Raffle Contract: ", playerRecorded);
+            console2.log("            Player recorded in Log: ", playerInLogAddress);
+            console2.log("                   Player expected: ", PLAYER);
+        }   
+        // Assert the player is recorded in the raffle contract
+        assert(playerRecorded == PLAYER);
+        // Assert the player is the sender of the transaction as recorded in the logs
+        bytes32 playerRecordedBytes = bytes32(uint256(uint160(playerRecorded)));
+        assert(playerInLogBytes == playerRecordedBytes);
+    }
+
+    /**
+     * TEST: The Reciever Emits Event When LESS Than Entrance Fee Is Sent to the Raffle Contract without Function Selector *
+     * Note: Player will Not be entered into the raffle when they send less than the entrance fee but will provide funds to the contract for 
+     * VRF calls, transfers to winners and any other automatic transactions *
+     */
+    function test_ReceiverEmitsEventWhenLessThanEntranceFeeIsSent() public {
+        // ARRANGE
+        // Setup: Player will send 1 unit (wei) less than the entrance fee
+        uint256 insufficientAmount = entranceFee - 1; 
+        //ACT
+        // Execute: Prepare to record logs
+        vm.recordLogs();
+        // Execute: Player enters the raffle
+        vm.startPrank(PLAYER);
+        (bool success,) = payable(raffle).call{value: insufficientAmount}("");
+        require(success, "Failed to send funds to Raffle contract");
+        vm.stopPrank();
+        // Execute: Get the recorded logs -
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        // Note: the 0th log is the VRF contract events and 1st log is the Raffle contract logs with requestId being in the 1st log (index 0 reserved for VRF events)
+        bytes32 playerInLogBytes = entries[0].topics[1];
+        address playerInLogAddress = address(uint160(uint256(playerInLogBytes)));
+        // ASSERT
+        // Verify: Visually
+        if (TEST_CONSOLE_LOGS_TF) {
+            console2.log("Player recorded in Log: ", playerInLogAddress);
+            console2.log("       Player expected: ", PLAYER);
+        }
+        // Assert the player is the sender of the transaction as recorded in the logs
+        assert(playerInLogAddress == PLAYER);
     }
 
     /**
@@ -233,6 +306,23 @@ contract RaffleTest is Test, CodeConstants {
         vm.expectRevert(Raffle.Raffle__SendMoreToEnterRaffle.selector);
         // Execute: Player enters the raffle with insufficient funds
         raffle.enterRaffle{value: insufficientAmount}();
+    }
+
+    /**
+     * TEST: Raffle contract should Revert When a Player Does Not Send Enough To Enter using Address of Player *
+     */
+    function test_RaffleRevertsWhenPlayerDoesNotSendEnoughToEnterUsingAddressFunction() public {
+        // ARRANGE
+        // Setup: Player will send 1 unit (wei) less than the entrance fee
+        uint256 insufficientAmount = entranceFee - 1;
+        // Setup: Next transaction will be from the player's address
+        vm.prank(PLAYER);
+
+        // ACT + ASSERT
+        // Execute: Expect Specific Revert when player tries to enter the raffle with insufficient funds
+        vm.expectRevert(Raffle.Raffle__SendMoreToEnterRaffle.selector);
+        // Execute: Player enters the raffle with insufficient funds
+        raffle.enterRaffle{value: insufficientAmount}(PLAYER);
     }
 
     /**
@@ -295,6 +385,30 @@ contract RaffleTest is Test, CodeConstants {
         vm.prank(PLAYER);
         vm.expectRevert(Raffle.Raffle__RaffleNotOpen.selector);
         raffle.enterRaffle{value: entranceFee}();
+    }
+    
+    /**
+     * TEST: Contract should Not Allow Players To Enter Raffle When it Is in Calculating state use Address Function *
+     * Note: This test will fail on the Arbitrum Sepolia chain
+     */
+    function test_DoNotAllowPlayerToEnterWhenRaffleIsCalculatingWhenUsingAddressEnterRaffle() public playerEnteredRaffle {
+        // ARRANGE
+        // Setup: Warp time + roll block number forward to when the raffle is ready to pick a winner
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 4);
+
+        // ACT
+        // Execute: Trigger Chainlink automated function to Use VRF to pick a winner and transfer funds
+        raffle.performUpkeep("");
+
+        // ASSERT
+        // EXTRA TEST: Ensure the state of the raffle is calculating
+        Raffle.RaffleState raffleState = raffle.getRaffleState();
+        assert(raffleState == Raffle.RaffleState.CALCULATING);
+        // Execute + Verify: Expect Specific Revert when player tries to enter the raffle
+        vm.prank(PLAYER);
+        vm.expectRevert(Raffle.Raffle__RaffleNotOpen.selector);
+        raffle.enterRaffle{value: entranceFee}(PLAYER);
     }
 
     /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
@@ -602,7 +716,7 @@ contract RaffleTest is Test, CodeConstants {
          // Execute + Verify: Expect Specific Revert when player tries to top up the subscription
          vm.expectRevert();
          // Execute: Player tries to top up the subscription
-         raffle.topUpSubscription(linkTokenAmount);
+         raffle.topUpSubscriptionWithLink(linkTokenAmount);
      }
 
      function test_LinkAmountMustBeLessThanBalanceToTopUpSubscription() public {
@@ -616,7 +730,7 @@ contract RaffleTest is Test, CodeConstants {
          // Execute + Verify: Expect Specific Revert when player tries to top up the subscription
          vm.expectRevert(Raffle.Raffle__LinkAmountMustBe1orMoreAndLessThanRaffleBalance.selector);
          // Execute: Player tries to top up the subscription
-         raffle.topUpSubscription(raffleBalance + 1);
+         raffle.topUpSubscriptionWithLink(raffleBalance + 1);
      }
      
      function test_AnyoneCanTopUpSubscription() notOnAnvil public {
@@ -659,7 +773,7 @@ contract RaffleTest is Test, CodeConstants {
          // Setup: Subscription should have been setup and funded
 
         // Execute: Get the subscription balance
-        uint96 subscriptionBalance = raffle.getVRFSubscriptionLinkBalance();
+        uint96 subscriptionBalance = raffle.getLinkBalanceOfVRFSubscription();
          // Verify: The subscription balance is greater than 0
         if(TEST_CONSOLE_LOGS_TF) {   
             console2.log("");
@@ -670,11 +784,11 @@ contract RaffleTest is Test, CodeConstants {
          // Setup: Next transaction will be from the player's address
          vm.prank(PLAYER);
          // Execute: Owner/linkTopper calls the Raffle Contract to top up the subscription
-         raffle.topUpSubscription(topUpLinkAmount);
+         raffle.topUpSubscriptionWithLink(topUpLinkAmount);
         //  Setup: Next transaction will be from the owner's address
          vm.prank(owner);
          // Execute: Get the subscription balance
-         (subscriptionBalance) = raffle.getVRFSubscriptionLinkBalance();
+         (subscriptionBalance) = raffle.getLinkBalanceOfVRFSubscription();
             // Verify: The subscription balance is greater than 0
         if(TEST_CONSOLE_LOGS_TF) { 
             console2.log("");
@@ -711,7 +825,7 @@ contract RaffleTest is Test, CodeConstants {
             uint96 subscriptionBalance;
          // ACT + ASSERT
             // Execute: Get the subscription balance
-            (subscriptionBalance) = raffle.getVRFSubscriptionLinkBalance();
+            (subscriptionBalance) = raffle.getLinkBalanceOfVRFSubscription();
             // Display: The subscription balance if Test Console Logs is true
             if(TEST_CONSOLE_LOGS_TF) { 
             // Verify: The subscription balance is greater than 0
@@ -769,7 +883,7 @@ contract RaffleTest is Test, CodeConstants {
             ( , , , subOwner, ) = IVRFCoordinatorV2Plus(vrfCoordinator).getSubscription(subscriptionId);
             // ACT
             // Execute: Get the subscription balance
-            uint96 subscriptionBalance = raffle.getVRFSubscriptionLinkBalance();
+            uint96 subscriptionBalance = raffle.getLinkBalanceOfVRFSubscription();
             if (TEST_CONSOLE_LOGS_TF) {
                 console2.log("");
                 console2.log("VRF Subscription Balance LINK: ", subscriptionBalance);
@@ -782,11 +896,11 @@ contract RaffleTest is Test, CodeConstants {
             // assert(owner == raffle.getOwner());
         }
 
-        function test_GetRaffleContractLinkBalance() public {
+        function test_GetLinkBalanceOfRaffleContract() public {
             // Setup: Transfer Link tokens to the Raffle contract and the owner
             uint256 linkTokenDepositAmount = 3 ether;
             // Setup: Get the Raffle Contract's balance before and after the top up
-            uint256 balanceBefore = raffle.getRaffleContractLinkBalance();
+            uint256 balanceBefore = raffle.getLinkBalanceOfRaffle();
 
             vm.startBroadcast(owner);
             LinkToken(linkTokenAddress).transfer(address(raffle), linkTokenDepositAmount);  
@@ -794,9 +908,21 @@ contract RaffleTest is Test, CodeConstants {
 
             // ACT + ASSERT
             // Execute: Get the raffle balance
-            uint256 balanceAfter = raffle.getRaffleContractLinkBalance();
+            uint256 balanceAfter = raffle.getLinkBalanceOfRaffle();
             // Verify: The raffle balance is greater than 0
             assert(balanceAfter == balanceBefore + linkTokenDepositAmount);
 
+        }
+
+        function test_GetLastTimeStamp() public view {
+            // ASSERT
+            // Verify: The last timestamp is greater than 0
+            assert(raffle.getLastTimeStamp() > 0);
+        }
+
+        function test_GetTxFeeBalance() public view {
+            // ASSERT
+            // Verify: The transaction fee balance is 0
+            assert(raffle.getTxFeeBalance() == INITIAL_RAFFLE_CONTRACT_ETH_DEPOSIT);
         } 
 }

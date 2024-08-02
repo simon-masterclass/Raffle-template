@@ -1,0 +1,82 @@
+Compiling 54 files with Solc 0.8.19
+Solc 0.8.19 finished in 5.66s
+Compiler run successful!
+Analysing contracts...
+Running tests...
+
+Ran 30 tests for test/RaffleTest.t.sol:RaffleTest
+[PASS] test_AnyoneCanTopUpSubscription() (gas: 236)
+[PASS] test_Atleast1LinkTokenRequiredToTopUpSubscription() (gas: 19696)
+[PASS] test_CheckUpkeepReturnsFalseIfEnoughTimeHasPassedWithNoRaffleEntries() (gas: 23267)
+[PASS] test_CheckUpkeepReturnsFalseIfItHasNoBalance() (gas: 23332)
+[PASS] test_CheckUpkeepReturnsFalseIfRaffleIsntOpen() (gas: 230971)
+[PASS] test_CheckUpkeepReturnsFalseWhenRaffleIsNotReady() (gas: 75699)
+[PASS] test_DoNotAllowPlayerToEnterWhenRaffleIsCalculating() (gas: 236875)
+[PASS] test_EnteringRaffleEmitsEvent() (gas: 69672)
+[PASS] test_FulfillRandomWordsCanonlyBeCalledAfterPerformUpkeep(uint256) (runs: 235, μ: 78803, ~: 78803)
+[PASS] test_FulfillRandomWordsPicksAWinnerResetsAndSendsMoney() (gas: 493900)
+[PASS] test_GetEntranceFee() (gas: 7917)
+[PASS] test_GetInterval() (gas: 7895)
+[PASS] test_GetLinkBalanceOfRaffleContract() (gas: 54044)
+[PASS] test_GetPlayerCount() (gas: 68379)
+[PASS] test_GetSubscriptionId() (gas: 17590)
+[PASS] test_GetVRFSubscriptionBalance() (gas: 42466)
+[PASS] test_InitialRaffleBalance() (gas: 7142)
+[PASS] test_LinkAmountMustBeLessThanBalanceToTopUpSubscription() (gas: 23902)
+[PASS] test_PerformUpkeepCanOnlyRunIfCheckUpkeepIsTrue() (gas: 230263)
+[PASS] test_PerformUpkeepRevertsWhenRaffleIsNotReady() (gas: 21571)
+[PASS] test_PerformUpkeepRevertsWithSpecificErrorIfUpkeepNotNeeded() (gas: 78145)
+[PASS] test_PerformUpkeepUpdatesRaffleStateAndEmitsRequestId() (gas: 235643)
+[PASS] test_RaffleInitializesInOpenState() (gas: 8107)
+[PASS] test_RaffleRecordsPlayersWhenTheyEnter() (gas: 70582)
+[PASS] test_RaffleRevertsWhenPlayerDoesNotSendEnoughToEnter() (gas: 20167)
+[PASS] test_ReceiverEmitsEventWhenLessThanEntranceFeeIsSent() (gas: 35867)
+[PASS] test_ReceiverEmitsEventWhenMoreThanEntranceFeeIsSent() (gas: 93336)
+[PASS] test_RecieverCallsEnterRaffleFunctionWhenMoreThanEntranceFeeIsSent() (gas: 85327)
+[PASS] test_SubscriptionIdIsfunded() (gas: 33426)
+[PASS] test_UpkeepNeededWhenTimeToPickWinner() (gas: 79336)
+Suite result: ok. 30 passed; 0 failed; 0 skipped; finished in 63.55ms (81.01ms CPU time)
+
+Ran 1 test suite in 158.84ms (63.55ms CPU time): 30 tests passed, 0 failed, 0 skipped (30 total tests)
+Uncovered for script/DeployRaffle.s.sol:
+- Function "run" (location: source ID 47, line 21, chars 705-760, hits: 0)
+- Line (location: source ID 47, line 22, chars 737-753, hits: 0)
+- Statement (location: source ID 47, line 22, chars 737-753, hits: 0)
+
+Uncovered for src/Raffle.sol:
+[NOTE: All of the lines below 48-66 are constructor settings]
+- Function "" (location: source ID 50, line 68, chars 2794-3835, hits: 0)
+- Line (location: source ID 50, line 79, chars 3153-3181, hits: 0)
+- Statement (location: source ID 50, line 79, chars 3153-3181, hits: 0)
+- Line (location: source ID 50, line 81, chars 3253-3275, hits: 0)
+- Statement (location: source ID 50, line 81, chars 3253-3275, hits: 0)
+- Line (location: source ID 50, line 83, chars 3387-3419, hits: 0)
+- Statement (location: source ID 50, line 83, chars 3387-3419, hits: 0)
+- Line (location: source ID 50, line 84, chars 3429-3467, hits: 0)
+- Statement (location: source ID 50, line 84, chars 3429-3467, hits: 0)
+- Line (location: source ID 50, line 86, chars 3478-3528, hits: 0)
+- Statement (location: source ID 50, line 86, chars 3478-3528, hits: 0)
+- Line (location: source ID 50, line 87, chars 3538-3574, hits: 0)
+- Statement (location: source ID 50, line 87, chars 3538-3574, hits: 0)
+- Line (location: source ID 50, line 90, chars 3635-3674, hits: 0)
+- Statement (location: source ID 50, line 90, chars 3635-3674, hits: 0)
+- Line (location: source ID 50, line 91, chars 3684-3716, hits: 0)
+- Statement (location: source ID 50, line 91, chars 3684-3716, hits: 0)
+- Line (location: source ID 50, line 94, chars 3794-3828, hits: 0)
+- Statement (location: source ID 50, line 94, chars 3794-3828, hits: 0)
+
+X
+- Line (location: source ID 50, line 117, chars 4787-4825, hits: 0)
+- Statement (location: source ID 50, line 117, chars 4787-4825, hits: 0)
+X
+- Line (location: source ID 50, line 121, chars 4992-5022, hits: 0)
+- Statement (location: source ID 50, line 121, chars 4992-5022, hits: 0)
+
+Y - Fullfill Random Words Function is difficutl to test + How do we make a transaction fail to force Emit?
+- Line (location: source ID 50, line 219, chars 9128-9167, hits: 0)
+- Statement (location: source ID 50, line 219, chars 9128-9167, hits: 0)
+- Branch (branch: 6, path: 1) (location: source ID 50, line 226, chars 9417-9618, hits: 0)
+
+Y - We do test this on the fork... ?
+- Line (location: source ID 50, line 230, chars 9706-9798, hits: 0)
+- Statement (location: source ID 50, line 230, chars 9706-9798, hits: 0)

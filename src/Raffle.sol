@@ -112,10 +112,11 @@ contract Raffle is VRFConsumerBaseV2Plus {
     }
 
     function enterRaffle(address playerSender_) external payable {
-        // require(msg.value >= i_entranceFee, "Raffle: Not enough ETH sent to enter.");
+        // Require that the player has sent enough ETH to enter the raffle
         if (msg.value < i_entranceFee) {
             revert Raffle__SendMoreToEnterRaffle();
         }
+        // Require that the raffle is open and not calculating (AKA: Picking a winner)
         if (s_raffleState == RaffleState.CALCULATING) {
             revert Raffle__RaffleNotOpen();
         }
@@ -125,8 +126,19 @@ contract Raffle is VRFConsumerBaseV2Plus {
     }
 
     function enterRaffle() external payable {
+        // Require that the player has sent enough ETH to enter the raffle
+        if (msg.value < i_entranceFee) {
+            revert Raffle__SendMoreToEnterRaffle();
+        }
+        // Require that the raffle is open and not calculating (AKA: Picking a winner)
+        if (s_raffleState == RaffleState.CALCULATING) {
+            revert Raffle__RaffleNotOpen();
+        }
         // pass the sender as the player
-        this.enterRaffle{value:msg.value}(msg.sender);
+        address playerSender = msg.sender;
+        // Add player to the raffle
+        s_players.push(payable(playerSender));
+        emit RaffleEntered(playerSender);
     }
 
     /**
@@ -210,12 +222,12 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     // Chainlink maintenance fuction: Assumes this contract owns link.
     // Amount must be more than 1 LINK = 1000000000000000000 = 10^18 wei = 1 ether
-    function topUpSubscription(uint256 amount) external {   
-        if ((LinkTokenInterface(s_LinkToken).balanceOf(address(this)) < amount) || (amount < 1 ether)) {
+    function topUpSubscriptionWithLink(uint256 amount_) external {   
+        if ((LinkTokenInterface(s_LinkToken).balanceOf(address(this)) < amount_) || (amount_ < 1 ether)) {
             revert Raffle__LinkAmountMustBe1orMoreAndLessThanRaffleBalance(); // custom erorr?
         }
         // Transfer Link and call the VRF Coordinator to fund the subscription
-        s_LinkToken.transferAndCall(address(s_vrfCoordinator), amount, abi.encode(s_subscriptionId));
+        s_LinkToken.transferAndCall(address(s_vrfCoordinator), amount_, abi.encode(s_subscriptionId));
     }
 
     /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
@@ -254,11 +266,15 @@ contract Raffle is VRFConsumerBaseV2Plus {
         return i_interval;
     }
 
-    function getVRFSubscriptionLinkBalance() external view returns (uint96 balance) {
+    function getLinkBalanceOfVRFSubscription() external view returns (uint96 balance) {
         (balance, , , , ) = IVRFCoordinatorV2Plus(s_vrfCoordinator).getSubscription(s_subscriptionId);
     }
 
-    function getRaffleContractLinkBalance() external view returns (uint256) {
+    function getLinkBalanceOfRaffle() external view returns (uint256) {
         return LinkTokenInterface(s_LinkToken).balanceOf(address(this));
+    }
+
+    function getTxFeeBalance() external view returns (uint256) {
+        return txFeeBalance;
     }
 }
