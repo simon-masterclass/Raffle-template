@@ -22,15 +22,15 @@ contract DeployRaffle is Script, CodeConstants {
         deployContract();
     }
 
-    function deployContract() public returns (Raffle, HelperConfig) {
+    function deployContract() public returns (Raffle, HelperConfig.NetworkConfig memory) {
         if (ENABLE_CONSOLE_LOGS_TF || SPECIAL_LOGS_TF) {
             // Display sender account
             console2.log("");
+            console2.log("");
             console2.log("#######################################");
             console2.log("Deploying Raffle contract using Account:", tx.origin);
-            console2.log("#######################################");
-            console2.log("");
             console2.log("Deploying Raffle contract on Chain Id: ", block.chainid);
+            console2.log("#######################################");
             console2.log("");
         }
 
@@ -72,7 +72,7 @@ contract DeployRaffle is Script, CodeConstants {
             console2.log("########################");
             console2.log("Raffle contract address: ", address(raffle));
             console2.log("########################");
-            // console2.log("");
+            console2.log("");
         }
 
         // Add Raffle contract as a consumer
@@ -81,6 +81,6 @@ contract DeployRaffle is Script, CodeConstants {
         // addConsumer.addConsumerUsingConfig(address(raffle));
         addConsumer.addConsumer(address(raffle), config.vrfCoordinator, config.subscriptionId, config.owner);
 
-        return (raffle, helperConfig);
+        return (raffle, config);
     }
 }

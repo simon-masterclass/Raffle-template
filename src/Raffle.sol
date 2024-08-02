@@ -11,6 +11,7 @@ pragma solidity ^0.8.19;
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
+import {IVRFCoordinatorV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/interfaces/IVRFCoordinatorV2Plus.sol";
 
 contract Raffle is VRFConsumerBaseV2Plus {
     /* Error Codes */
@@ -220,6 +221,16 @@ contract Raffle is VRFConsumerBaseV2Plus {
         s_LinkToken.transferAndCall(address(s_vrfCoordinator), amount, abi.encode(s_subscriptionId));
     }
 
+    // Chainlink maintenance fuction: Assumes this contract owns link.
+    // Amount must be more than 1 LINK = 1000000000000000000 = 10^18 wei = 1 ether
+    function topUpSubscriptionAll(uint256 amount) external {
+        if ((LinkTokenInterface(s_LinkToken).balanceOf(address(this)) < amount) || (amount < 1 ether)) {
+            revert(); // custom erorr?
+        }
+        // Transfer Link and call the VRF Coordinator to fund the subscription
+        s_LinkToken.transferAndCall(address(s_vrfCoordinator), amount, abi.encode(s_subscriptionId));
+    }
+
     /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
                             GETTER FUNCTIONS
      *|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
@@ -246,5 +257,17 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     function getRecentWinner() public view returns (address) {
         return s_recentWinner;
+    }
+
+    function getSubscriptionId() public view returns (uint256) {
+        return s_subscriptionId;
+    }   
+
+    function getInterval() public view returns (uint256) {
+        return i_interval;
+    }
+
+    function getVRFSubscriptionBalanceAndOwner() external view returns (uint96 balance, address owner) {
+        (balance, , , owner, ) = IVRFCoordinatorV2Plus(s_vrfCoordinator).getSubscription(s_subscriptionId);
     }
 }

@@ -36,8 +36,9 @@ contract CreateSubscription is Script, CodeConstants {
 
     function createSubscription(address vrfCoordinator, address owner) public returns (uint256, address) {
         // Call vrfCoordinator on the specified Network to create subscription
+        uint256 subId;
         vm.startBroadcast(owner);
-        uint256 subId = VRFCoordinatorV2_5Mock(vrfCoordinator).createSubscription();
+        subId = VRFCoordinatorV2_5Mock(vrfCoordinator).createSubscription();
         vm.stopBroadcast();
 
         if (ENABLE_CONSOLE_LOGS_TF) {
@@ -55,7 +56,7 @@ contract CreateSubscription is Script, CodeConstants {
 }
 
 contract FundSubscription is Script, CodeConstants {
-    uint256 public constant FUND_AMOUNT = 3 ether; //3 Link
+    uint256 public constant FUND_AMOUNT = 5 ether; //5 Link
 
     function run() public {
         fundSubscriptionUsingConfig();
@@ -91,7 +92,7 @@ contract FundSubscription is Script, CodeConstants {
             if(block.chainid == ARBITRUM_SEPOLIA_CHAINID)
             {
                 console2.log("");
-                console2.log("F: CHECK LINK TOKEN BALANCES:");
+                console2.log("F: CHECK LINK TOKEN BALANCE ON ARBITRUM TEST ACCOUNT:");
                 console2.log("F: Address of owner: ", OWNER_DEPLOYER_2);
                 console2.log(
                     "F: Link Token Balance of Owner Before transferAndCall: ", LinkToken(linkToken_).balanceOf(OWNER_DEPLOYER_2)

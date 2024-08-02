@@ -15,7 +15,7 @@ import {LinkToken} from "test/mocks/LinkToken.sol";
 
 abstract contract CodeConstants {
     // Owner of the contract when deploying to forks or testnets - TBD
-    address public OWNER_DEPLOYER = tx.origin;
+    address public OWNER_DEPLOYER = 0x7145F2DD87cf598932442deBE49c41278d88C970;
     address public OWNER_DEPLOYER_2 = 0x7145F2DD87cf598932442deBE49c41278d88C970;
 
     // Foundry Anvil Test Accounts - RED and BLUE Teams
@@ -25,7 +25,7 @@ abstract contract CodeConstants {
     // VRF Mock Values - Don't really matter for the Mock
     uint96 public MOCK_BASE_FEE =  0.00034 ether;          
     uint96 public MOCK_GAS_PRICE_LINK = 1e9;             
-    int256 public MOCK_WEI_PER_UNIT_LINK = 4e15; 
+    int256 public MOCK_WEI_PER_UNIT_LINK = 1e18; //4e15; 
 
     // Chain Ids
     uint256 public constant LOCAL_CHAINID = 31337;
@@ -35,8 +35,10 @@ abstract contract CodeConstants {
     uint256 public constant SEPOLIA_ETH_CHAINID = 11155111;
 
     // Enable / Disable console logs for testing
-    bool public constant ENABLE_CONSOLE_LOGS_TF = true;
-    bool public constant SPECIAL_LOGS_TF = true;   
+    bool public constant ENABLE_CONSOLE_LOGS_TF = false;
+    bool public constant SPECIAL_LOGS_TF = false;   
+    bool public constant TEST_CONSOLE_LOGS_TF = true;
+
 }
 
 contract HelperConfig is Script, CodeConstants {
@@ -85,7 +87,7 @@ contract HelperConfig is Script, CodeConstants {
             return localNetworkConfig;
         }
 
-        //34 Link
+        // 34 Link
         // uint256 FUND_AMOUNT = 34 ether; 
         // subId = subscriptionId = 0, unless the createSubscription function is called in broadcast above
         uint256 subId = 0; 
@@ -156,7 +158,7 @@ contract HelperConfig is Script, CodeConstants {
 
     function getSepoliaEthConfig() public view returns (NetworkConfig memory sepoliaNetworkConfig) {
         sepoliaNetworkConfig = NetworkConfig({
-            entranceFee: 1 ether,
+            entranceFee: 0.0001 ether,
             interval: 30, // 30 seconds
             nativePayment: false,
             callbackGasLimit: 500000, // 500,000 gas
