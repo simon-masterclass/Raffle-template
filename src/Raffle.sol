@@ -20,6 +20,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     error Raffle__RaffleNotOpen();
     error Raffle__onlyRaffleOwnerCanCallThisFunction();
     error Raffle__TransferToWinnerFailed();
+    error Raffle__LinkAmountMustBe1orMoreAndLessThanRaffleBalance();
 
     /* Type Declarations */
     enum RaffleState {
@@ -225,7 +226,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     // Amount must be more than 1 LINK = 1000000000000000000 = 10^18 wei = 1 ether
     function topUpSubscriptionAll(uint256 amount) external {
         if ((LinkTokenInterface(s_LinkToken).balanceOf(address(this)) < amount) || (amount < 1 ether)) {
-            revert(); // custom erorr?
+            revert Raffle__LinkAmountMustBe1orMoreAndLessThanRaffleBalance(); // custom erorr?
         }
         // Transfer Link and call the VRF Coordinator to fund the subscription
         s_LinkToken.transferAndCall(address(s_vrfCoordinator), amount, abi.encode(s_subscriptionId));
@@ -267,7 +268,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         return i_interval;
     }
 
-    function getVRFSubscriptionBalanceAndOwner() external view returns (uint96 balance, address owner) {
-        (balance, , , owner, ) = IVRFCoordinatorV2Plus(s_vrfCoordinator).getSubscription(s_subscriptionId);
+    function getVRFSubscriptionLinkBalance() external view returns (uint96 balance) {
+        (balance, , , , ) = IVRFCoordinatorV2Plus(s_vrfCoordinator).getSubscription(s_subscriptionId);
     }
 }
