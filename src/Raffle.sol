@@ -18,7 +18,6 @@ contract Raffle is VRFConsumerBaseV2Plus {
     error Raffle__SendMoreToEnterRaffle();
     error Raffle__UpkeepNotNeeded(uint256 balance, uint256 playersLength, uint256 raffleState);
     error Raffle__RaffleNotOpen();
-    error Raffle__onlyRaffleOwnerCanCallThisFunction();
     error Raffle__TransferToWinnerFailed();
     error Raffle__LinkAmountMustBe1orMoreAndLessThanRaffleBalance();
 
@@ -52,24 +51,15 @@ contract Raffle is VRFConsumerBaseV2Plus {
     address private s_recentWinner;
     RaffleState private s_raffleState;
 
-    // Storage parameters
+    /* Storage parameters for Chainlink VRF */
     uint256[] public s_randomWords;
     uint256 public s_subscriptionId;
-    address private s_linkTopper;
 
     /* Events */
     event RaffleEntered(address indexed player);
     event RaffleWinnerPicked(address indexed winner, uint256 winnings);
     event RequestRaffleWinner(uint256 indexed requestId);
     event someOneSentETH(address indexed sender, uint256 value);
-
-    /* Modifiers */
-    modifier onlyRaffleTopper() {
-        if (msg.sender != s_linkTopper) {
-            revert Raffle__onlyRaffleOwnerCanCallThisFunction();
-        }
-        _;
-    }
 
     /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
                            CONSTRUCTOR
@@ -80,7 +70,6 @@ contract Raffle is VRFConsumerBaseV2Plus {
         uint256 interval_,
         bool nativePayment_,
         uint32 callbackGasLimit_,
-        address linkTopper_,
         address linkTokenAddress,
         bytes32 keyHash4GasLane_,
         uint256 subscriptionId_,
@@ -93,7 +82,6 @@ contract Raffle is VRFConsumerBaseV2Plus {
         // if Native Payments is true, VRF services are paid in native currency instead of Link token
         i_nativePayment = nativePayment_;
         i_callbackGasLimit = callbackGasLimit_;
-        s_linkTopper = linkTopper_;
 
         s_LinkToken = LinkTokenInterface(linkTokenAddress);
         i_keyHash4GasLane = keyHash4GasLane_;
@@ -106,13 +94,16 @@ contract Raffle is VRFConsumerBaseV2Plus {
         s_subscriptionId = subscriptionId_;
     }
 
+    /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
+                            EXTERNAL FUNCTIONS
+     *|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
+
     receive() external payable {
         // If someone sends ETH to the contract, check if they sent enough to enter the raffle, if so, enter them.
-        if (msg.value > i_entranceFee) {
-            this.enterRaffle();
+        if (msg.value >= i_entranceFee) {
+            // Call enterRaffle function with the sender as the player
+            this.enterRaffle{value:msg.value}(msg.sender);
         } else {
-            // // If not enough ETH sent, revert the transaction
-            // revert Raffle__SendMoreToEnterRaffle();
             // Add to transaction fee balance
             txFeeBalance += msg.value;
         }
@@ -120,11 +111,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         emit someOneSentETH(msg.sender, msg.value);
     }
 
-    /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
-                            EXTERNAL FUNCTIONS
-     *|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
-
-    function enterRaffle() external payable {
+    function enterRaffle(address playerSender_) external payable {
         // require(msg.value >= i_entranceFee, "Raffle: Not enough ETH sent to enter.");
         if (msg.value < i_entranceFee) {
             revert Raffle__SendMoreToEnterRaffle();
@@ -132,9 +119,14 @@ contract Raffle is VRFConsumerBaseV2Plus {
         if (s_raffleState == RaffleState.CALCULATING) {
             revert Raffle__RaffleNotOpen();
         }
+        // Add player to the raffle
+        s_players.push(payable(playerSender_));
+        emit RaffleEntered(playerSender_);
+    }
 
-        s_players.push(payable(msg.sender));
-        emit RaffleEntered(msg.sender);
+    function enterRaffle() external payable {
+        // pass the sender as the player
+        this.enterRaffle{value:msg.value}(msg.sender);
     }
 
     /**
@@ -217,14 +209,8 @@ contract Raffle is VRFConsumerBaseV2Plus {
     }
 
     // Chainlink maintenance fuction: Assumes this contract owns link.
-    // 1000000000000000000 = 1 LINK
-    function topUpSubscription(uint256 amount) external onlyRaffleTopper {
-        s_LinkToken.transferAndCall(address(s_vrfCoordinator), amount, abi.encode(s_subscriptionId));
-    }
-
-    // Chainlink maintenance fuction: Assumes this contract owns link.
     // Amount must be more than 1 LINK = 1000000000000000000 = 10^18 wei = 1 ether
-    function topUpSubscriptionAll(uint256 amount) external {
+    function topUpSubscription(uint256 amount) external {   
         if ((LinkTokenInterface(s_LinkToken).balanceOf(address(this)) < amount) || (amount < 1 ether)) {
             revert Raffle__LinkAmountMustBe1orMoreAndLessThanRaffleBalance(); // custom erorr?
         }
@@ -270,5 +256,9 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     function getVRFSubscriptionLinkBalance() external view returns (uint96 balance) {
         (balance, , , , ) = IVRFCoordinatorV2Plus(s_vrfCoordinator).getSubscription(s_subscriptionId);
+    }
+
+    function getRaffleContractLinkBalance() external view returns (uint256) {
+        return LinkTokenInterface(s_LinkToken).balanceOf(address(this));
     }
 }

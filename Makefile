@@ -50,6 +50,17 @@ anvil :; anvil -m 'test test test test test test test test test test test junk' 
 zk-anvil :; npx zksync-cli dev start
 
 #####################################################################################
+# Test Scripts
+#####################################################################################
+# Test the Raffle.sol:Raffle contract
+
+test-fork-s:
+	forge test --fork-url $(SEPOLIA_RPC_URL)
+
+test-fork-s-vvv:
+	forge test --fork-url $(SEPOLIA_RPC_URL) -vvv
+
+#####################################################################################
 # Deploy Scripts - Raffle.sol:Raffle
 #####################################################################################
 
@@ -58,8 +69,6 @@ zk-anvil :; npx zksync-cli dev start
 # 	@forge script script/DeployRaffle.s.sol:DeployRaffle $(NETWORK_ARGS)
 
 # NETWORK_ARGS := --rpc-url http://localhost:8545 --private-key $(DEFAULT_ANVIL_PRIVATE_KEY) --broadcast
-
-
 deploy-anvil: 
 	forge script script/DeployRaffle.s.sol:DeployRaffle --rpc-url http://localhost:8545 --private-key $(DEFAULT_ANVIL_PRIVATE_KEY) --broadcast -vvvv
 

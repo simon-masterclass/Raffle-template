@@ -59,7 +59,7 @@ contract DeployRaffle is Script, CodeConstants {
             config.interval,
             config.nativePayment,
             config.callbackGasLimit,
-            config.owner, // Owner of the contract - TBD - set OWNER_DEPLOYER in HelperConfig
+            // config.owner, // Owner of the contract - TBD - set OWNER_DEPLOYER in HelperConfig
             config.linkTokenAddress,
             config.keyHash4GasLane,
             config.subscriptionId,

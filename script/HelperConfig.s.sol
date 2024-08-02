@@ -36,7 +36,7 @@ abstract contract CodeConstants {
 
     // Enable / Disable console logs for testing
     bool public constant ENABLE_CONSOLE_LOGS_TF = false;
-    bool public constant SPECIAL_LOGS_TF = false;   
+    bool public constant SPECIAL_LOGS_TF = true;   
     bool public constant TEST_CONSOLE_LOGS_TF = true;
 
 }

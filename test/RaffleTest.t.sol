@@ -81,7 +81,7 @@ contract RaffleTest is Test, CodeConstants {
             console2.log("                        tx.origin: ", tx.origin);
             console2.log("                       msg.sender: ", msg.sender);
             console2.log("+[0][0]-SETUP:B4-DEPLOYMENT-[0][0]+");
-            console2.log("");
+            // console2.log("");
         }
         // Setup: Deploy Raffle contract
         DeployRaffle deployRaffle = new DeployRaffle();
@@ -101,14 +101,15 @@ contract RaffleTest is Test, CodeConstants {
         owner = config.owner;   
         
         if (TEST_CONSOLE_LOGS_TF) {
-            console2.log("");
+            console2.log("               |                   ");
+            console2.log("               V                   ");
             console2.log("+[0][0]-SETUP: AFTER-DEPLOY-[0][0]+");
             console2.log("                    Owner address: ", owner);
             console2.log("                        tx.origin: ", tx.origin);
             console2.log("                       msg.sender: ", msg.sender);
             console2.log("+[0][0]-SETUP: AFTER-DEPLOY-[0][0]+");
             console2.log("");
-            console2.log("");
+            console2.log(""); 
             console2.log("+[0][0]-SETUP:VRF-SUBSCRIBER_ID-[0][0]+");
             console2.log("        VRF Subscription ID in config: ", config.subscriptionId);
             console2.log("       Chain-Specific VRF Coordinator: ", config.vrfCoordinator);
@@ -124,14 +125,15 @@ contract RaffleTest is Test, CodeConstants {
             console2.log(" B4::              Owner Address: ", owner);
             console2.log(" B4::          Owner Balance ETH: ", owner.balance);
             console2.log("+[0][0]-SETUP: B4-CALL-ETH-[0][0]+");
-            console2.log("             |||             ");
-            console2.log("+vvvvvvvvvvvvvvvvvvvvvvvvvvv+");
-            console2.log("+v v v v v v v v v v v v v v+");
-            console2.log("+ vv   vv    vvv    vv   vv +");
-            console2.log("    +   vv    v    vv  +    ");
-            console2.log("        +     v     +         ");
-            console2.log("           +  v  +         ");
-            console2.log("              v              ");
+            console2.log("               |                  ");
+            console2.log("               V                  ");
+            // console2.log("+vvvvvvvvvvvvvvvvvvvvvvvvvvv+");
+            // console2.log("+v v v v v v v v v v v v v v+");
+            // console2.log("+ vv   vv    vvv    vv   vv +");
+            // console2.log("    +   vv    v    vv  +     ");
+            // console2.log("        +     v     +        ");
+            // console2.log("           +  v  +           ");
+            // console2.log("              v              ");
             // console2.log("");
         }
     
@@ -166,6 +168,10 @@ contract RaffleTest is Test, CodeConstants {
 
     }
 
+    /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
+                            INITIAL BALANCE TESTS
+     *|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
+
     /**
      * TEST: Ensure the Raffle has and initial balance *
      */
@@ -187,6 +193,30 @@ contract RaffleTest is Test, CodeConstants {
     /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
                             ENTER RAFFLE TESTS
      *|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
+
+    /**
+     * TEST: Player Can Enter Raffle When They Send Enough Funds Without Function Selector *
+     */
+    function test_RecieverCallsEnterRaffleFunctionWhenMoreThanEntranceFeeIsSent() public {
+        // ARRANGE
+        // Setup: Next transaction will be from the player's address
+
+        // ACT
+        // Execute: Player enters the raffle
+        vm.startPrank(PLAYER);
+        (bool success,) = payable(raffle).call{value: entranceFee*2}("");
+        require(success, "Failed to send funds to Raffle contract");
+        vm.stopPrank();        
+        // ASSERT
+        // Verify: The player is recorded in the raffle contract
+        uint256 playerCount = raffle.getPlayerCount(); //Should be: playerCount = 1
+        assert(playerCount == 1);
+        //Should be: (playerCount - 1) = 0 = (1 - 1) = 0 index should return PLAYER address
+        address playerRecorded = raffle.getPlayer(playerCount - 1);
+        console2.log("Player recorded: ", playerRecorded);
+        console2.log("Player expected: ", PLAYER);
+        assert(playerRecorded == PLAYER);
+    }
 
     /**
      * TEST: Raffle contract should Revert When a Player Does Not Send Enough To Enter *
@@ -562,65 +592,31 @@ contract RaffleTest is Test, CodeConstants {
          _;
      }
 
-     function test_OnlyLinkTokenTopperCanTopUpSubscription() public {
+     function test_Atleast1LinkTokenRequiredToTopUpSubscription() public {
          // ARRANGE
-         // Setup: Next transaction will be from the player's address
-         vm.prank(PLAYER);
-         uint256 linkTokenAmount = 1 ether;
+         uint256 linkTokenAmount = 0.5 ether;
 
          // ACT + ASSERT
+         // Setup: Next transaction will be from the player's address
+         vm.prank(PLAYER);
          // Execute + Verify: Expect Specific Revert when player tries to top up the subscription
          vm.expectRevert();
          // Execute: Player tries to top up the subscription
          raffle.topUpSubscription(linkTokenAmount);
      }
 
-     function test_TheLinkTokenTopperCanTopUpSubscription() notOnAnvil public {
-         // ARRANGE
-         // Setup: Link token amount to top up the subscription
-         uint256 linkTokenAmount = 1 ether;
-         // Visually check the balances
-         uint256 balanceBefore = LinkToken(linkTokenAddress).balanceOf(owner);
-         console2.log("+------------------------------------+");
-         console2.log("Raffle Contract Balance B4 B4: ", balanceBefore);
-         console2.log("Link Topper Balance B4 B4: ", LinkToken(linkTokenAddress).balanceOf(owner));
-         console2.log("+------------------------------------+");
-         // Setup: Transfer Link tokens to the Raffle contract and the owner
-         vm.startBroadcast();
-         LinkToken(linkTokenAddress).transfer(address(raffle), linkTokenAmount); 
-        //  LinkToken(linkTokenAddress).transfer(owner, linkTokenAmount); 
-         vm.stopBroadcast();
-        // Setup: Get the owner's balance before and after the top up
-         balanceBefore = LinkToken(linkTokenAddress).balanceOf(address(raffle));
-         uint256 balanceTopper = LinkToken(linkTokenAddress).balanceOf(owner);
+     function test_LinkAmountMustBeLessThanBalanceToTopUpSubscription() public {
+        // ARRANGE
+         //setup: Get the Raffle Contract's balance before the top up
+         uint256 raffleBalance = LinkTokenInterface(linkTokenAddress).balanceOf(address(raffle)) ;
 
          // ACT + ASSERT
+         // Setup: Next transaction will be from the player's address
+         vm.prank(PLAYER);
          // Execute + Verify: Expect Specific Revert when player tries to top up the subscription
-         // Assert: The Raffle Contract's balance has increased by the link token amount
-         assert(balanceBefore == linkTokenAmount); 
-        // Visually check the balances
-         console2.log("+------------------------------------+");
-         console2.log("       Raffle Contract Balance Before: ", balanceBefore);
-         console2.log("           Link Topper Balance Before: ", balanceTopper);
-         console2.log("+------------------------------------+");
-
-         // Setup: Next transaction will be from the owner's address
-         vm.prank(owner);
-         // Execute: Owner/linkTopper calls the Raffle Contract to top up the subscription
-         raffle.topUpSubscription(linkTokenAmount);
-        //  Setup: Next transaction will be from the owner's address
-         vm.prank(owner);
-         // Execute: Get the owner's balance after the top up
-         uint256 balanceAfter = LinkToken(linkTokenAddress).balanceOf(address(raffle));
-         console2.log("+------------------------------------+");
-         console2.log("+------------------------------------+");
-         console2.log("        Raffle Contract Balance After: ", balanceAfter);
-         // Verify that the Consumer is the Raffle contract & not the owner
-         balanceTopper = LinkToken(linkTokenAddress).balanceOf(owner);
-         console2.log("            Link Topper Balance After: ", balanceTopper);
-         console2.log("+------------------------------------+");
-         // Verify: The owner's balance has decreased by the link token amount
-         assert(balanceAfter == balanceBefore - linkTokenAmount);
+         vm.expectRevert(Raffle.Raffle__LinkAmountMustBe1orMoreAndLessThanRaffleBalance.selector);
+         // Execute: Player tries to top up the subscription
+         raffle.topUpSubscription(raffleBalance + 1);
      }
      
      function test_AnyoneCanTopUpSubscription() notOnAnvil public {
@@ -674,7 +670,7 @@ contract RaffleTest is Test, CodeConstants {
          // Setup: Next transaction will be from the player's address
          vm.prank(PLAYER);
          // Execute: Owner/linkTopper calls the Raffle Contract to top up the subscription
-         raffle.topUpSubscriptionAll(topUpLinkAmount);
+         raffle.topUpSubscription(topUpLinkAmount);
         //  Setup: Next transaction will be from the owner's address
          vm.prank(owner);
          // Execute: Get the subscription balance
@@ -748,10 +744,13 @@ contract RaffleTest is Test, CodeConstants {
         function test_GetSubscriptionId() public view {
             // ASSERT
             // Verify: The subscription id is 0
-            console2.log("");
-            console2.log("Subscription ID function: ", raffle.getSubscriptionId());
-            console2.log("Subscription ID variable: ", subscriptionId);
-            console2.log("");
+            if (TEST_CONSOLE_LOGS_TF) {
+                console2.log("");
+                console2.log("Subscription ID function: ", raffle.getSubscriptionId());
+                console2.log("Subscription ID variable: ", subscriptionId);
+                console2.log("");
+            }
+            // Verify: The subscription id is the same as the one in the HelperConfig
             assert(raffle.getSubscriptionId() == subscriptionId);
         }     
 
@@ -762,7 +761,7 @@ contract RaffleTest is Test, CodeConstants {
 
         }
 
-        function test_getVRFSubscriptionBalance() public view {
+        function test_GetVRFSubscriptionBalance() public view {
             // ARRANGE
             // Setup: Subscription should have been setup and funded
             // setup: Get the Owner of the subscription for the Console log
@@ -781,5 +780,23 @@ contract RaffleTest is Test, CodeConstants {
             // Verify: The subscription balance is greater than 0
             assert(subscriptionBalance > 0);
             // assert(owner == raffle.getOwner());
-        }  
+        }
+
+        function test_GetRaffleContractLinkBalance() public {
+            // Setup: Transfer Link tokens to the Raffle contract and the owner
+            uint256 linkTokenDepositAmount = 3 ether;
+            // Setup: Get the Raffle Contract's balance before and after the top up
+            uint256 balanceBefore = raffle.getRaffleContractLinkBalance();
+
+            vm.startBroadcast(owner);
+            LinkToken(linkTokenAddress).transfer(address(raffle), linkTokenDepositAmount);  
+            vm.stopBroadcast();
+
+            // ACT + ASSERT
+            // Execute: Get the raffle balance
+            uint256 balanceAfter = raffle.getRaffleContractLinkBalance();
+            // Verify: The raffle balance is greater than 0
+            assert(balanceAfter == balanceBefore + linkTokenDepositAmount);
+
+        } 
 }
