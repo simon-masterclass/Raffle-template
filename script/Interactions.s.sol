@@ -92,8 +92,8 @@ contract FundSubscription is Script, CodeConstants {
             if(block.chainid == ARBITRUM_SEPOLIA_CHAINID)
             {
                 console2.log("");
-                console2.log("F: CHECK LINK TOKEN BALANCE ON ARBITRUM TEST ACCOUNT:");
-                console2.log("F: Address of owner: ", OWNER_DEPLOYER_2);
+                console2.log("F: * CHECK LINK TOKEN BALANCE ON ARBITRUM TEST ACCOUNT * ");
+                console2.log("F: Address of owner: ", OWNER_DEPLOYER_2); 
                 console2.log(
                     "F: Link Token Balance of Owner Before transferAndCall: ", LinkToken(linkToken_).balanceOf(OWNER_DEPLOYER_2)
                 );

@@ -47,6 +47,7 @@ Uncovered for script/DeployRaffle.s.sol:
 - Line (location: source ID 47, line 22, chars 737-753, hits: 0)
 - Statement (location: source ID 47, line 22, chars 737-753, hits: 0)
 
+[****** NOTE: The lines below are constructor settings - code has coverage ******]
 Uncovered for src/Raffle.sol:
 - Function "" (location: source ID 50, line 68, chars 2794-3835, hits: 0)
 - Line (location: source ID 50, line 79, chars 3153-3181, hits: 0)
@@ -67,6 +68,8 @@ Uncovered for src/Raffle.sol:
 - Statement (location: source ID 50, line 91, chars 3684-3716, hits: 0)
 - Line (location: source ID 50, line 94, chars 3794-3828, hits: 0)
 - Statement (location: source ID 50, line 94, chars 3794-3828, hits: 0)
+
+[****** NOTE: The lines below must be tested on live testnet - Chainlink VRF callback function ******]
 
 - Line (location: source ID 50, line 219, chars 9128-9167, hits: 0)
 - Statement (location: source ID 50, line 219, chars 9128-9167, hits: 0)
